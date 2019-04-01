@@ -4,6 +4,8 @@
 This is the primary file for TUBDUCK.
 It is intended to call all submethods as modules.
 
+Requires Python 3.4.
+
 TUBDUCK is a system and accompanying platform for
 Translating Unstructured Biomedical Data into Unified, Coherent 
 Knowledgebases. It renders experimental and clinical text as graphs,
@@ -18,8 +20,11 @@ import sys
 
 import nltk
 
-import tubduck_helpers, tubduck_start
-import tubduck_input, tubduck_process, tubduck_output
+import tubduck_helpers as thelp
+import tubduck_start as tstart
+import tubduck_input as tinput
+import tubduck_process as tproc
+import tubduck_output as toutput
 
 ## Constants and Options
 
@@ -29,14 +34,18 @@ import tubduck_input, tubduck_process, tubduck_output
 
 ## Main
 def main():
-	must_setup = True
 	
 	print("*** TUBDUCK ***")
 	
 	print("Checking to see what setup may be required.")
-	if must_setup:
-		print("Performing intial setup.")
+	setup_to_do = tstart.setup_checks()
+	if len(setup_to_do) > 0:
+		print("Performing intial setup for: %s" % (", ".join(setup_to_do)))
 		#Run tubduck_start methods here
+		if tstart.setup(setup_to_do):
+			print("All setup complete.")
+		else:
+			sys.exit("Setup did not complete properly.")
 	else:
 		print("No setup required.")
 		
