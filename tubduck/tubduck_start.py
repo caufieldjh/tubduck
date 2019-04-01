@@ -99,6 +99,7 @@ def setup(setup_to_do):
 		Returns True if setup encounters no errors.'''
 		
 	setup_all = True #Default is to set up everything
+	status = True
 		
 	if "working directory" in setup_to_do:
 		path = Path('../working')
@@ -120,9 +121,12 @@ def setup(setup_to_do):
 			need_kb_files.append("mo")
 		if "LEXICON" not in kb_files:
 			need_kb_files.append("sl")
-		get_kbs(need_kb_files,kb_path)
-		
-	return True
+			
+		if not get_kbs(need_kb_files,kb_path):
+			print("Encountered errors while retrieving knowledge base files.")
+			status = False
+			
+	return status
 	
 def get_kbs(names, path):
 	'''
@@ -142,6 +146,7 @@ def get_kbs(names, path):
 					"sl": ("https://lsg3.nlm.nih.gov/LexSysGroup/Projects/lexicon/2019/release/LEX/", "LEXICON")}
 	
 	filenames = []
+	status = True #Becomes False upon encountering error
 	
 	for name in names:
 		baseURL, filename = data_locations[name]
@@ -164,8 +169,8 @@ def get_kbs(names, path):
 					break
 				pbar.update(1)
 		except urllib2.URLError as e:
-			sys.exit("Encountered an error while downloading %s: %s" % (filename, e))
-		filenames.append(filename)
-	
-	return filenames
+			print("Encountered an error while downloading %s: %s" % (filename, e))
+			status = False
+			
+	return status
 		
