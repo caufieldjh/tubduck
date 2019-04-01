@@ -83,11 +83,13 @@ def setup_checks():
 	
 	#Check on what we already have
 	if kb_path.exists():
-		kb_files = [x for x in path.iterdir()]
+		kb_files = [x for x in kb_path.iterdir()]
 		if len(kb_files) == 0:
-			setup_list.append("knowledge bases")
+			setup_list.append("all knowledge bases")
+		else:
+			setup_list.append("some knowledge bases")
 	else:
-		setup_list.append("knowledge bases")
+		setup_list.append("all knowledge bases")
 	
 	return setup_list
 	
@@ -103,10 +105,22 @@ def setup(setup_to_do):
 		path.mkdir(parents=True)
 		setup_all = True
 		
-	if "knowledge bases" in setup_to_do:
+	if "all knowledge bases" in setup_to_do:
 		kb_path = Path('../working/kbs')
 		kb_path.mkdir(parents=True)
-		get_kbs(["do"],kb_path) #Just one for now
+		get_kbs(["do","sl"],kb_path)
+		
+	if "some knowledge bases" in setup_to_do:
+		kb_path = Path('../working/kbs')
+		kb_files = [x.stem for x in kb_path.iterdir()]
+		need_kb_files = []
+		if "doid" not in kb_files:
+			need_kb_files.append("do")
+		if "d2019" not in kb_files:
+			need_kb_files.append("mo")
+		if "LEXICON" not in kb_files:
+			need_kb_files.append("sl")
+		get_kbs(need_kb_files,kb_path)
 		
 	return True
 	
@@ -119,14 +133,13 @@ def get_kbs(names, path):
 	Retrieves one or more of the following:
 	 Disease Ontology database (do)
 	 2018 MeSH term file from NLM (mo)
-	 2017 SPECIALIST Lexicon from NLM (sl).
-	The last of these requires decompression and returns a directory.
+	 2019 SPECIALIST Lexicon from NLM (sl).
 	The others return a filename.
 	'''
 	
 	data_locations = {"do": ("http://ontologies.berkeleybop.org/","doid.obo"),
-					"mo": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2018.bin"), #Need to update
-					"sl": ("https://lexsrv3.nlm.nih.gov/LexSysGroup/Projects/lexicon/2017/release/LEX/", "LEXICON")} #Need to update
+					"mo": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2019.bin"), 
+					"sl": ("https://lsg3.nlm.nih.gov/LexSysGroup/Projects/lexicon/2019/release/LEX/", "LEXICON")}
 	
 	filenames = []
 	
@@ -146,7 +159,7 @@ def get_kbs(names, path):
 				out_file.write(data)
 				if not data:
 					pbar.close()
-					print("\n%s file download complete." % filename)
+					#print("\n%s file download complete." % filename)
 					out_file.close()
 					break
 				pbar.update(1)
