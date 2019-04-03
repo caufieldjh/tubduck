@@ -4,7 +4,7 @@
 This is the primary file for TUBDUCK.
 It is intended to call all submethods as modules.
 
-Requires Python 3.4.
+Requires Python 3.4 or above.
 
 TUBDUCK is a system and accompanying platform for
 Translating Unstructured Biomedical Data into Unified, Coherent 
@@ -18,7 +18,7 @@ __email__ = "jcaufield@mednet.ucla.edu"
 
 import sys
 
-import nltk
+#import nltk
 
 import tubduck_helpers as thelp
 import tubduck_start as tstart
@@ -40,8 +40,7 @@ def main():
 	print("Checking to see what setup may be required.")
 	setup_to_do = tstart.setup_checks()
 	if len(setup_to_do) > 0:
-		print("Performing intial setup for: %s" % (", ".join(setup_to_do)))
-		#Run tubduck_start methods here
+		print("Performing intial setup for: \n%s" % ("\n".join(setup_to_do)))
 		if tstart.setup(setup_to_do):
 			print("All setup complete.")
 		else:
