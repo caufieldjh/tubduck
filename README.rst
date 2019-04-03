@@ -8,4 +8,6 @@ It renders experimental and clinical text as graphs, for integration into a know
 
 TUBDUCK is designed to be domain-sensitive, particularly for cardiovascular disease research and cardiovascular clinial case reports.
 
+TUBDUCK is a work in progress.
+
 🛁🦆
