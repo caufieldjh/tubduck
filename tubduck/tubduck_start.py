@@ -56,18 +56,6 @@ B. Graph methods
 	5. Concept graph assembly
 '''
 
-'''
-Trying to handle Neo4j entirely within the script for automation,
-but this is challenging as it must:
-1. Check to see if the graph DB already exists, and if so, whether it's
-empty
-2. If the DB doesn't exist, create it
-Right now I'm stuck on that first step - I can get py2neo to create a
-graph but I can't check on whether an existing DB is there + empty.
-Just getting a lot of refused connections and I think DBs aren't actually
-being created.
-'''
-
 import os
 import subprocess
 #import resource #for raising open file limits as per Neo4j
@@ -119,14 +107,6 @@ def setup_checks():
 	else:
 		setup_list.append("process all knowledge bases")
 		
-	'''Check on Neo4j DB status. This means we need to start its service,
-	then attempt to access the DB and verify it isn't empty. 
-	If it is empty, or if it doesn't exist, that suggests we need to 
-	start the DB anew, though if there are still issues
-	then it will fail again shortly.'''
-	
-	if not is_service_running('neo4j'):
-		os.system("sudo service neo4j start") #May be a problem sometime
 	if not test_graphdb():
 		setup_list.append("set up graph DB")
 
@@ -285,12 +265,14 @@ def create_graphdb():
 	
 	try:
 		graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
-		#print("Access graph at http://localhost:7474")
+		graph.delete_all() #Clear anything that already exists
 		
 		node1 = Node("Concept",name="protein")
 		node2 = Node("Concept",name="biomolecule")
 		rel1 = Relationship(node1,"is_a",node2)
 		graph.create(rel1)
+		
+		print("Graph DB created: access at http://localhost:7474")
 		status = True
 		
 	except ConnectionRefusedError as e:
@@ -301,14 +283,29 @@ def create_graphdb():
 	return status
 	
 def test_graphdb():
-	'''Checks to see if the Neo4j database exists and is not empty.
-	Returns True if these conditions are met.'''
+	'''Checks to see if the Neo4j database exists.
+	It may be available for the local user or at the system level.
+	Don't do anything with it yet.
+	Returns True if it exists, even if it's empty.'''
 	
 	status = False
 	
-	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
-	print(graph)
+	ndb_home_path = Path.home() / "neo4j/data/databases"
+	ndb_sys_path = Path("/var/lib/neo4j/data/databases")
+	
+	ndb_paths = [ndb_home_path, ndb_sys_path]
+	
+	for path in ndb_paths:
+		if path.exists():
+			ndb_files = [x for x in path.iterdir()]
+			if len(ndb_files) > 0:
+				print("Found existing Neo4j database at %s." % path)
+				status = True
 		
+	if not is_service_running("neo4j"):
+		print("Starting Neo4j service.")
+		subprocess.run(["sudo", "service", "neo4j", "start"]) #May be a problem sometime
+	
 	return status
 
 def is_service_running(name):
