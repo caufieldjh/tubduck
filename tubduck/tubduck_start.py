@@ -56,9 +56,21 @@ B. Graph methods
 	5. Concept graph assembly
 '''
 
+'''
+Trying to handle Neo4j entirely within the script for automation,
+but this is challenging as it must:
+1. Check to see if the graph DB already exists, and if so, whether it's
+empty
+2. If the DB doesn't exist, create it
+Right now I'm stuck on that first step - I can get py2neo to create a
+graph but I can't check on whether an existing DB is there + empty.
+Just getting a lot of refused connections and I think DBs aren't actually
+being created.
+'''
+
 import os
 import subprocess
-import time
+#import resource #for raising open file limits as per Neo4j
 
 from urllib.request import urlopen
 import urllib.error
@@ -108,18 +120,16 @@ def setup_checks():
 		setup_list.append("process all knowledge bases")
 		
 	'''Check on Neo4j DB status. This means we need to start its service,
-	then attempt to access the DB. Any errors here will suggest
-	we need to start the DB anew, though if there are still issues
+	then attempt to access the DB and verify it isn't empty. 
+	If it is empty, or if it doesn't exist, that suggests we need to 
+	start the DB anew, though if there are still issues
 	then it will fail again shortly.'''
 	
 	if not is_service_running('neo4j'):
 		os.system("sudo service neo4j start") #May be a problem sometime
-		time.sleep(5) #Take a few moments to let service start
-	try:
-		graph = Graph(host="localhost:7474", auth=("neo4j", "tubduck"))
-	except:
+	if not test_graphdb():
 		setup_list.append("set up graph DB")
-	
+
 	return setup_list
 	
 def setup(setup_to_do):
@@ -264,26 +274,41 @@ def process_kbs(names, inpath, outpath):
 def create_graphdb():
 	'''Sets up an empty Neo4j database through py2neo.
 	Sets the initial password as Neo4j requires it.
-	Populates the graph with initial nodes and relationships.'''
+	Populates the graph with initial nodes and relationships.
+	Returns True if the graph DB is created successfully.'''
 	
 	status = False
 	
-	#try:
+	#Only really need to do the next two things once
 	subprocess.run(["sudo","neo4j-admin", "set-initial-password", "tubduck"])
-	graph = Graph(password="tubduck")
-	#print("Access graph at http://localhost:7474")
+	#resource.setrlimit(resource.RLIMIT_NOFILE, (100000, 100000))
 	
-	node1 = Node("Concept",name="protein")
-	node2 = Node("Concept",name="biomolecule")
-	rel1 = Relationship(node1,"is_a",node2)
-	graph.create(rel1)
-	status = True
+	try:
+		graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
+		#print("Access graph at http://localhost:7474")
 		
-	#except py2neo.database.status.* as e:
-	#	print("**Encountered an error in Neo4j graph DB setup: %s" % e)
-	#	print("**Please try accessing the server at http://localhost:7474/")
-	#	print("**The default username is \"neo4j\" and the password is \"neo4j\".")
+		node1 = Node("Concept",name="protein")
+		node2 = Node("Concept",name="biomolecule")
+		rel1 = Relationship(node1,"is_a",node2)
+		graph.create(rel1)
+		status = True
+		
+	except ConnectionRefusedError as e:
+		print("**Encountered an error in Neo4j graph DB setup: %s" % e)
+		print("**Please try accessing the server at http://localhost:7474/")
+		print("**The default username is \"neo4j\" and the password is \"neo4j\".")
 	
+	return status
+	
+def test_graphdb():
+	'''Checks to see if the Neo4j database exists and is not empty.
+	Returns True if these conditions are met.'''
+	
+	status = False
+	
+	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
+	print(graph)
+		
 	return status
 
 def is_service_running(name):
