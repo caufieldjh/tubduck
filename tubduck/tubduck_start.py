@@ -58,6 +58,7 @@ B. Graph methods
 
 import os
 import subprocess
+import time
 #import resource #for raising open file limits as per Neo4j
 
 from urllib.request import urlopen
@@ -259,13 +260,17 @@ def create_graphdb():
 	
 	status = False
 	
-	#Only really need to do the next two things once
+	#Only really need to do the next few things once
+	if not is_service_running("neo4j"):
+		print("Starting Neo4j.")
+		subprocess.run(["sudo", "neo4j", "start"])
+		time.sleep(5) #Take a few moments to let service start
 	subprocess.run(["sudo","neo4j-admin", "set-initial-password", "tubduck"])
 	#resource.setrlimit(resource.RLIMIT_NOFILE, (100000, 100000))
 	
 	try:
 		graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
-		graph.delete_all() #Clear anything that already exists
+		#graph.delete_all() #Clear anything that already exists
 		
 		node1 = Node("Concept",name="protein")
 		node2 = Node("Concept",name="biomolecule")
@@ -302,10 +307,6 @@ def test_graphdb():
 				print("Found existing Neo4j database at %s." % path)
 				status = True
 		
-	if not is_service_running("neo4j"):
-		print("Starting Neo4j service.")
-		subprocess.run(["sudo", "service", "neo4j", "start"]) #May be a problem sometime
-	
 	return status
 
 def is_service_running(name):
