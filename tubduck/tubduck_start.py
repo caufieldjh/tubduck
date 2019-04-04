@@ -57,12 +57,17 @@ B. Graph methods
 '''
 
 import os
+import subprocess
+import time
 
 from urllib.request import urlopen
 import urllib.error
 
 from pathlib import Path
 from tqdm import *
+
+import py2neo
+from py2neo import Graph, Node, Relationship
 
 ## Functions
 def setup_checks():
@@ -101,6 +106,19 @@ def setup_checks():
 			setup_list.append("process some knowledge bases")
 	else:
 		setup_list.append("process all knowledge bases")
+		
+	'''Check on Neo4j DB status. This means we need to start its service,
+	then attempt to access the DB. Any errors here will suggest
+	we need to start the DB anew, though if there are still issues
+	then it will fail again shortly.'''
+	
+	if not is_service_running('neo4j'):
+		os.system("sudo service neo4j start") #May be a problem sometime
+		time.sleep(5) #Take a few moments to let service start
+	try:
+		graph = Graph(host="localhost:7474", auth=("neo4j", "tubduck"))
+	except:
+		setup_list.append("set up graph DB")
 	
 	return setup_list
 	
@@ -158,6 +176,11 @@ def setup(setup_to_do):
 	if not process_kbs(kb_proc_codes,kb_path,kb_proc_path):
 		print("Encountered errors while processing knowledge base files.")
 		status = False
+		
+	if "set up graph DB" in setup_to_do:
+		if not create_graphdb():
+			print("Encountered errors while setting up graph database.")
+			status = False
 			
 	return status
 	
@@ -237,4 +260,38 @@ def process_kbs(names, inpath, outpath):
 			print("Encountered an error while processing %s: %s" % (infilename, e))
 	
 	return status
+	
+def create_graphdb():
+	'''Sets up an empty Neo4j database through py2neo.
+	Sets the initial password as Neo4j requires it.
+	Populates the graph with initial nodes and relationships.'''
+	
+	status = False
+	
+	#try:
+	subprocess.run(["sudo","neo4j-admin", "set-initial-password", "tubduck"])
+	graph = Graph(password="tubduck")
+	#print("Access graph at http://localhost:7474")
+	
+	node1 = Node("Concept",name="protein")
+	node2 = Node("Concept",name="biomolecule")
+	rel1 = Relationship(node1,"is_a",node2)
+	graph.create(rel1)
+	status = True
 		
+	#except py2neo.database.status.* as e:
+	#	print("**Encountered an error in Neo4j graph DB setup: %s" % e)
+	#	print("**Please try accessing the server at http://localhost:7474/")
+	#	print("**The default username is \"neo4j\" and the password is \"neo4j\".")
+	
+	return status
+
+def is_service_running(name):
+	'''Checks if a Linux service is running.
+	See https://stackoverflow.com/questions/17541044/how-can-i-make-the-python-program-to-check-linux-services
+	'''
+	with open(os.devnull, 'wb') as hide_output:
+		exit_code = subprocess.Popen(['service', name, 'status'], \
+			stdout=hide_output, stderr=hide_output).wait()
+			
+	return exit_code == 0	

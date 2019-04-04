@@ -5,6 +5,8 @@ This is the primary file for TUBDUCK.
 It is intended to call all submethods as modules.
 
 Requires Python 3.4 or above.
+Uses Neo4j graph database. 
+  This requires Java 8; see https://neo4j.com/docs/ for more info.
 
 TUBDUCK is a system and accompanying platform for
 Translating Unstructured Biomedical Data into Unified, Coherent 
@@ -40,7 +42,7 @@ def main():
 	print("Checking to see what setup may be required.")
 	setup_to_do = tstart.setup_checks()
 	if len(setup_to_do) > 0:
-		print("Performing intial setup for: \n%s" % ("\n".join(setup_to_do)))
+		print("Performing intial setup for: \n* %s" % ("\n* ".join(setup_to_do)))
 		if tstart.setup(setup_to_do):
 			print("All setup complete.")
 		else:
