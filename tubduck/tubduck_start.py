@@ -384,10 +384,7 @@ def create_graphdb():
 	
 	#Only really need to do the next few things once
 	subprocess.run(["sudo","neo4j-admin", "set-initial-password", "tubduck"])
-	if not is_service_running("neo4j"):
-		print("Starting Neo4j.")
-		subprocess.run(["sudo", "neo4j", "start"])
-		time.sleep(5) #Take a few moments to let service start
+	start_neo4j()
 	#resource.setrlimit(resource.RLIMIT_NOFILE, (100000, 100000))
 	
 	#try:
@@ -443,10 +440,7 @@ def graphdb_stats():
 	
 	graphdb_values = {}
 	
-	if not is_service_running("neo4j"):
-		print("Starting Neo4j.")
-		subprocess.run(["sudo", "neo4j", "start"])
-		time.sleep(5) #Take a few moments to let service start
+	start_neo4j()
 	
 	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
 	graph_data = graph.run("MATCH (n1)-[r]->(n2) RETURN r, n1, n2 LIMIT 10").data()
@@ -454,13 +448,22 @@ def graphdb_stats():
 	
 	return graphdb_values
 
-def is_service_running(name):
-	'''Checks if a Linux service is running.
-	See https://stackoverflow.com/questions/17541044/how-can-i-make-the-python-program-to-check-linux-services
-	Doesn't work quite right at the moment.
-	'''
-	with open(os.devnull, 'wb') as hide_output:
-		exit_code = subprocess.Popen(['service', name, 'status'], \
-			stdout=hide_output, stderr=hide_output).wait()
-			
-	return exit_code == 0	
+def start_neo4j():
+	'''Checks if the Neo4j server is running, and if not, 
+	starts it.
+	Note that this is specifically whether the superuser is running
+	the server, not a different user running it locally.'''
+	
+	status = False
+	
+	process = subprocess.Popen(["sudo", "neo4j", "status"], stdout=subprocess.PIPE)
+	out, err = process.communicate()
+	if out.rstrip() == b"Neo4j is not running": #Start Neo4j
+		print("Starting Neo4j.")
+		subprocess.run(["sudo", "neo4j", "start"])
+		time.sleep(5) #Take a few moments to let service start
+		status = True
+	else:
+		status = True
+		
+	return status	
