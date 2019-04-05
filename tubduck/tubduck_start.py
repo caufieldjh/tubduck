@@ -255,35 +255,42 @@ def process_kbs(names, inpath, outpath):
 def create_graphdb():
 	'''Sets up an empty Neo4j database through py2neo.
 	Sets the initial password as Neo4j requires it.
+	(Note - this needs to happen BEFORE starting Neo4j.)
 	Populates the graph with initial nodes and relationships.
 	Returns True if the graph DB is created successfully.'''
 	
 	status = False
 	
 	#Only really need to do the next few things once
+	subprocess.run(["sudo","neo4j-admin", "set-initial-password", "tubduck"])
 	if not is_service_running("neo4j"):
 		print("Starting Neo4j.")
 		subprocess.run(["sudo", "neo4j", "start"])
 		time.sleep(5) #Take a few moments to let service start
-	subprocess.run(["sudo","neo4j-admin", "set-initial-password", "tubduck"])
 	#resource.setrlimit(resource.RLIMIT_NOFILE, (100000, 100000))
 	
-	try:
-		graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
-		#graph.delete_all() #Clear anything that already exists
-		
-		node1 = Node("Concept",name="protein")
-		node2 = Node("Concept",name="biomolecule")
-		rel1 = Relationship(node1,"is_a",node2)
-		graph.create(rel1)
-		
+	#try:
+	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
+	#graph.delete_all() #Clear anything that already exists
+	
+	tx = graph.begin()
+	node1 = Node("Concept",name="protein")
+	tx.create(node1)
+	node2 = Node("Concept",name="biomolecule")
+	rel1 = Relationship(node1,"is_a",node2)
+	tx.create(rel1)
+	tx.commit()
+	
+	if graph.exists(rel1):
 		print("Graph DB created: access at http://localhost:7474")
 		status = True
+	else:
+		print("Encountered an error in graph DB setup: could not create relation.")
 		
-	except ConnectionRefusedError as e:
-		print("**Encountered an error in Neo4j graph DB setup: %s" % e)
-		print("**Please try accessing the server at http://localhost:7474/")
-		print("**The default username is \"neo4j\" and the password is \"neo4j\".")
+	# except Exception as e:
+		# print("**Encountered an error in Neo4j graph DB setup: %s" % e)
+		# print("**Please try accessing the server at http://localhost:7474/")
+		# print("**The default username is \"neo4j\" and the password is \"neo4j\".")
 	
 	return status
 	
