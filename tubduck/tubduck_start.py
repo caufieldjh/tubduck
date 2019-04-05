@@ -113,8 +113,12 @@ def setup_checks():
 	else:
 		setup_list.append("process all knowledge bases")
 		
-	if not test_graphdb():
+	if not graphdb_exists():
 		setup_list.append("set up graph DB")
+		
+	gdb_vals = graphdb_stats()
+	if gdb_vals["rel_count"] < 2:
+		setup_list.append("populate graph DB")
 
 	return setup_list
 	
@@ -388,7 +392,7 @@ def create_graphdb():
 	
 	#try:
 	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
-	#graph.delete_all() #Clear anything that already exists
+	graph.delete_all() #Clear anything that already exists
 	
 	tx = graph.begin()
 	node1 = Node("Concept",name="protein")
@@ -411,7 +415,7 @@ def create_graphdb():
 	
 	return status
 	
-def test_graphdb():
+def graphdb_exists():
 	'''Checks to see if the Neo4j database exists.
 	It may be available for the local user or at the system level.
 	Don't do anything with it yet.
@@ -432,10 +436,28 @@ def test_graphdb():
 				status = True
 		
 	return status
+	
+def graphdb_stats():
+	'''Gets details about the Neo4j database.
+	Returns a dict of values.'''
+	
+	graphdb_values = {}
+	
+	if not is_service_running("neo4j"):
+		print("Starting Neo4j.")
+		subprocess.run(["sudo", "neo4j", "start"])
+		time.sleep(5) #Take a few moments to let service start
+	
+	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
+	graph_data = graph.run("MATCH (n1)-[r]->(n2) RETURN r, n1, n2 LIMIT 10").data()
+	graphdb_values["rel_count"] = len(graph_data)
+	
+	return graphdb_values
 
 def is_service_running(name):
 	'''Checks if a Linux service is running.
 	See https://stackoverflow.com/questions/17541044/how-can-i-make-the-python-program-to-check-linux-services
+	Doesn't work quite right at the moment.
 	'''
 	with open(os.devnull, 'wb') as hide_output:
 		exit_code = subprocess.Popen(['service', name, 'status'], \
