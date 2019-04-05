@@ -70,6 +70,13 @@ from tqdm import *
 import py2neo
 from py2neo import Graph, Node, Relationship
 
+## Constants
+TOTAL_KBS = 3 #The total count of knowledge bases we'll use
+				#To be specified in more detail later
+WORKING_PATH = Path('../working')
+KB_PATH = Path('../working/kbs')
+KB_PROC_PATH = Path('../working/kbs/processed')
+
 ## Functions
 def setup_checks():
 	'''Check to see which setup steps need to be completed.
@@ -79,31 +86,29 @@ def setup_checks():
 		
 	setup_list = []
 	working_files = []
-	path = Path('../working')
-	kb_path = Path('../working/kbs')
-	kb_proc_path = Path('../working/kbs/processed')
-	
+
 	#Check if working directory exists. If not, all tasks required.
 	
-	if path.exists():
-		working_files = [x for x in path.iterdir()]
+	if WORKING_PATH.exists():
+		working_files = [x for x in WORKING_PATH.iterdir()]
 	else:
 		setup_list.append("working directory")
 	
 	#Check on what we already have
-	if kb_path.exists():
-		kb_files = [x for x in kb_path.iterdir()]
+	if KB_PATH.exists():
+		kb_files = [x for x in KB_PATH.iterdir()]
 		if len(kb_files) == 0:
 			setup_list.append("retrieve all knowledge bases")
-		else:
+		elif len(kb_files) < TOTAL_KBS:
 			setup_list.append("retrieve some knowledge bases")
 	else:
 		setup_list.append("retrieve all knowledge bases")
-	if kb_proc_path.exists():
-		kb_proc_files = [x for x in kb_proc_path.iterdir()]
+		
+	if KB_PROC_PATH.exists():
+		kb_proc_files = [x for x in KB_PROC_PATH.iterdir()]
 		if len(kb_proc_files) == 0:
 			setup_list.append("process all knowledge bases")
-		else:
+		elif len(kb_proc_files) < TOTAL_KBS:
 			setup_list.append("process some knowledge bases")
 	else:
 		setup_list.append("process all knowledge bases")
@@ -124,17 +129,17 @@ def setup(setup_to_do):
 	kb_proc_codes = kb_codes
 		
 	if "working directory" in setup_to_do:
-		path = Path('../working')
-		path.mkdir(parents=True)
+		WORKING_PATH.mkdir(parents=True)
 		setup_all = True
 		
 	if "retrieve all knowledge bases" in setup_to_do:
-		kb_path = Path('../working/kbs')
-		kb_path.mkdir(parents=True)
+		KB_PATH.mkdir(parents=True)
+		if not get_kbs(kb_codes,KB_PATH):
+			print("Encountered errors while retrieving knowledge base files.")
+			status = False
 		
 	if "retrieve some knowledge bases" in setup_to_do:
-		kb_path = Path('../working/kbs')
-		kb_files = [x.stem for x in kb_path.iterdir()]
+		kb_files = [x.stem for x in KB_PATH.iterdir()]
 		need_kb_files = []
 		if "doid" not in kb_files:
 			need_kb_files.append("do")
@@ -143,30 +148,29 @@ def setup(setup_to_do):
 		if "LEXICON" not in kb_files:
 			need_kb_files.append("sl")
 		kb_codes = need_kb_files
-		
-	if not get_kbs(kb_codes,kb_path):
-		print("Encountered errors while retrieving knowledge base files.")
-		status = False
+		if not get_kbs(kb_codes,KB_PATH):
+			print("Encountered errors while retrieving knowledge base files.")
+			status = False
 	
 	if "process all knowledge bases" in setup_to_do:
-		kb_proc_path = Path('../working/kbs/processed')
-		kb_proc_path.mkdir(parents=True)
+		KB_PROC_PATH.mkdir(parents=True)
+		if not process_kbs(kb_proc_codes,KB_PATH,KB_PROC_PATH):
+			print("Encountered errors while processing knowledge base files.")
+			status = False
 	
 	if "process some knowledge bases" in setup_to_do:
-		kb_proc_path = Path('../working/kbs/processed')
-		kb_proc_files = [x.stem for x in kb_proc_path.iterdir()]
+		kb_proc_files = [x.stem for x in KB_PROC_PATH.iterdir()]
 		need_kb_proc_files = []
-		if "doid-proc" not in kb_files:
-			need_kb_files.append("do")
-		if "d2019-proc" not in kb_files:
-			need_kb_files.append("mo")
-		if "LEXICON-proc" not in kb_files:
-			need_kb_files.append("sl")
+		if "doid-proc" not in kb_proc_files:
+			need_kb_proc_files.append("do")
+		if "d2019-proc" not in kb_proc_files:
+			need_kb_proc_files.append("mo")
+		if "LEXICON-proc" not in kb_proc_files:
+			need_kb_proc_files.append("sl")
 		kb_proc_codes = need_kb_proc_files
-		
-	if not process_kbs(kb_proc_codes,kb_path,kb_proc_path):
-		print("Encountered errors while processing knowledge base files.")
-		status = False
+		if not process_kbs(kb_proc_codes,KB_PATH,KB_PROC_PATH):
+			print("Encountered errors while processing knowledge base files.")
+			status = False
 		
 	if "set up graph DB" in setup_to_do:
 		if not create_graphdb():
@@ -249,6 +253,7 @@ def process_kbs(names, inpath, outpath):
 			pbar.close()
 		except IOError as e:
 			print("Encountered an error while processing %s: %s" % (infilename, e))
+			status = False
 	
 	return status
 	
