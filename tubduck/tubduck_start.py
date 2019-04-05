@@ -241,6 +241,16 @@ def process_kbs(names, inpath, outpath):
 				pass
 			else:
 				status = False
+		if name == "mo":
+			if process_mo(kb_names[name], inpath, outpath):
+				pass
+			else:
+				status = False
+		if name == "sl":
+			if process_sl(kb_names[name], inpath, outpath):
+				pass
+			else:
+				status = False
 		else:
 			pass
 	
@@ -284,7 +294,80 @@ def process_do(infilename, inpath, outpath):
 		status = False
 
 	return status
+
+def process_mo(infilename, inpath, outpath):
+	'''Processes MeSH into relationship format.
+	Takes input from process_kbs.'''
 	
+	status = True
+	
+	infilepath = inpath / infilename
+	newfilename = (str(infilename.split(".")[0])) + "-proc"
+	outfilepath = outpath / newfilename
+	print("Processing %s." % infilename)
+	try:
+		pbar = tqdm(unit=" lines")
+		with infilepath.open() as infile:
+			with outfilepath.open("w") as outfile:
+				entry = {}
+				for line in infile:
+					text = line.strip().split("=",1)
+					if text == ["*NEWRECORD"]: #start new entry for term
+						if len(entry.keys()) > 0: #If we have a previous entry, write it
+							outfile.write(str(entry) + "\n")
+						entry = {}
+					if text[0].strip() in ["RECTYPE","MH","AQ","ENTRY","MN","PA"]:
+						if text[0] in entry.keys(): #Have it already
+							entry[text[0]].append(text[1].strip())
+						else:
+							entry[text[0]] = [text[1].strip()]
+					pbar.update(1)
+				if len(entry.keys()) > 0: #Write the last entry
+					outfile.write(str(entry) + "\n")
+					
+		pbar.close()
+	except IOError as e:
+		print("Encountered an error while processing %s: %s" % (infilename, e))
+		status = False
+
+	return status
+	
+def process_sl(infilename, inpath, outpath):
+	'''Processes Semantic Lexicon into relationship format.
+	Takes input from process_kbs.'''
+	
+	status = True
+	
+	infilepath = inpath / infilename
+	newfilename = (str(infilename.split(".")[0])) + "-proc"
+	outfilepath = outpath / newfilename
+	print("Processing %s." % infilename)
+	try:
+		pbar = tqdm(unit=" lines")
+		with infilepath.open() as infile:
+			with outfilepath.open("w") as outfile:
+				entry = {}
+				for line in infile:
+					text = line.strip().split("=",1)
+					if text[0] == "{base": #start new entry for term
+						if len(entry.keys()) > 0: #If we have a previous entry, write it
+							outfile.write(str(entry) + "\n")
+						entry = {}
+						entry["base"] = text[1]
+					if text[0].strip() in ["entry","cat","variants"]:
+						if text[0] in entry.keys(): #Have it already
+							entry[text[0]].append(text[1].strip())
+						else:
+							entry[text[0]] = [text[1].strip()]
+					pbar.update(1)
+				if len(entry.keys()) > 0: #Write the last entry
+					outfile.write(str(entry) + "\n")
+		pbar.close()
+	except IOError as e:
+		print("Encountered an error while processing %s: %s" % (infilename, e))
+		status = False
+
+	return status
 
 def create_graphdb():
 	'''Sets up an empty Neo4j database through py2neo.
