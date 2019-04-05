@@ -443,8 +443,8 @@ def graphdb_stats():
 	start_neo4j()
 	
 	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
-	graph_data = graph.run("MATCH (n1)-[r]->(n2) RETURN r, n1, n2 LIMIT 10").data()
-	graphdb_values["rel_count"] = len(graph_data)
+	graph_data = graph.run("MATCH ()-->() RETURN count(*)").data()
+	graphdb_values["rel_count"] = graph_data[0]["count(*)"]
 	
 	return graphdb_values
 
