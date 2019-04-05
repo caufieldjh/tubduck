@@ -228,35 +228,64 @@ def process_kbs(names, inpath, outpath):
 	Also requires a Path to the folder where they are AND where they
 	should go once processed.'''
 	
-	#Just copies files for now as placeholder
-	
 	status = True
 	
 	kb_names = {"do": "doid.obo",
 					"mo": "d2019.bin", 
 					"sl": "LEXICON"}
 	
+	#Processing methods are KB-specific as formats vary
 	for name in names:
-		infilename = kb_names[name]
-		infilepath = inpath / infilename
-		newfilename = (str(infilename.split(".")[0])) + "-proc"
-		outfilepath = outpath / newfilename
-		print("Processing %s." % infilename)
-		try:
-			pbar = tqdm()
-			with infilepath.open() as infile:
-				with outfilepath.open("w") as outfile:
-					for line in infile:
-						#print(line)
-						outfile.write(line)
-						pbar.update(1)
-			pbar.close()
-		except IOError as e:
-			print("Encountered an error while processing %s: %s" % (infilename, e))
-			status = False
+		if name == "do":
+			if process_do(kb_names[name], inpath, outpath):
+				pass
+			else:
+				status = False
+		else:
+			pass
 	
 	return status
+
+def process_do(infilename, inpath, outpath):
+	'''Processes the Disease Ontology into relationship format.
+	Takes input from process_kbs.'''
 	
+	status = True
+	
+	infilepath = inpath / infilename
+	newfilename = (str(infilename.split(".")[0])) + "-proc"
+	outfilepath = outpath / newfilename
+	print("Processing %s." % infilename)
+	try:
+		pbar = tqdm(unit=" lines")
+		with infilepath.open() as infile:
+			with outfilepath.open("w") as outfile:
+				entry = {}
+				for line in infile:
+					text = line.strip().split(":",1)
+					if text == ["[Term]"]: #start new entry for term
+						if len(entry.keys()) > 0: #If we have a previous entry, write it
+							outfile.write(str(entry) + "\n")
+						entry = {}
+					if text[0] in ["id","name","alt_id","def","subset","synonym","xref","is_a"]:
+						if text[0] in entry.keys(): #Have it already
+							entry[text[0]].append(text[1].strip())
+						else:
+							entry[text[0]] = [text[1].strip()]
+					if text == ["[Typedef]"]: #Don't do anything with these yet
+						if len(entry.keys()) > 0: #Write the last entry
+							outfile.write(str(entry) + "\n")
+						entry = {}
+					pbar.update(1)
+				
+		pbar.close()
+	except IOError as e:
+		print("Encountered an error while processing %s: %s" % (infilename, e))
+		status = False
+
+	return status
+	
+
 def create_graphdb():
 	'''Sets up an empty Neo4j database through py2neo.
 	Sets the initial password as Neo4j requires it.
