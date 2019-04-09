@@ -61,6 +61,8 @@ import subprocess
 import time
 #import resource #for raising open file limits as per Neo4j
 
+import ast
+
 from urllib.request import urlopen
 import urllib.error
 
@@ -76,6 +78,10 @@ TOTAL_KBS = 3 #The total count of knowledge bases we'll use
 WORKING_PATH = Path('../working')
 KB_PATH = Path('../working/kbs')
 KB_PROC_PATH = Path('../working/kbs/processed')
+
+KB_NAMES = {"do": "doid.obo",		#The set of all knowledge bases,
+				"mo": "d2019.bin",  #with two-letter codes as keys.
+				"sl": "LEXICON"}
 
 ## Functions
 def setup_checks():
@@ -180,6 +186,11 @@ def setup(setup_to_do):
 		if not create_graphdb():
 			print("Encountered errors while setting up graph database.")
 			status = False
+	
+	if "populate graph DB" in setup_to_do:
+		if not populate_graphdb():
+			print("Encountered errors while populating graph database.")
+			status = False
 			
 	return status
 	
@@ -234,24 +245,20 @@ def process_kbs(names, inpath, outpath):
 	
 	status = True
 	
-	kb_names = {"do": "doid.obo",
-					"mo": "d2019.bin", 
-					"sl": "LEXICON"}
-	
 	#Processing methods are KB-specific as formats vary
 	for name in names:
 		if name == "do":
-			if process_do(kb_names[name], inpath, outpath):
+			if process_do(KB_NAMES[name], inpath, outpath):
 				pass
 			else:
 				status = False
 		if name == "mo":
-			if process_mo(kb_names[name], inpath, outpath):
+			if process_mo(KB_NAMES[name], inpath, outpath):
 				pass
 			else:
 				status = False
 		if name == "sl":
-			if process_sl(kb_names[name], inpath, outpath):
+			if process_sl(KB_NAMES[name], inpath, outpath):
 				pass
 			else:
 				status = False
@@ -444,7 +451,12 @@ def graphdb_stats():
 	
 	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
 	graph_data = graph.run("MATCH ()-->() RETURN count(*)").data()
-	graphdb_values["rel_count"] = graph_data[0]["count(*)"]
+	rel_count = graph_data[0]["count(*)"]
+	graphdb_values["rel_count"] = rel_count
+	if rel_count < 2:
+		print("Neo4j database requires population.")
+	else:
+		print("Neo4j database contains %s relations." % str(graphdb_values["rel_count"]))
 	
 	return graphdb_values
 
@@ -466,4 +478,33 @@ def start_neo4j():
 	else:
 		status = True
 		
-	return status	
+	return status
+	
+def populate_graphdb():
+	'''Loads entities and relations into graph DB from processed KBs.
+	Most of these form the concept graph: they define conceptual
+	relationships, including "is a" relationships.
+	Initial contents of the instance graph are also included: these
+	relationships correspond to reported events within text, e.g.,
+	symptoms or diagnostics reported within clinical case reports.
+	Returns True if all population activities complete without error.'''
+	
+	status = False
+	
+	print("Populating graph DB...")
+	
+	#Load each KB, then load its relations. Loading is KB-specific.
+	#Note that not every dict entry is a valid relation.
+	for kb in KB_NAMES:
+		kb_rels = []
+		infilename = KB_NAMES[kb].split(".")[0] + "-proc"
+		print("Loading %s..." % infilename)
+		pbar = tqdm(unit=" entries")
+		infilepath = KB_PROC_PATH / infilename
+		with infilepath.open('r') as infile:
+			for line in infile: #Go line-by-line to be careful
+				kb_rels.append(ast.literal_eval(line.rstrip()))
+				pbar.update(1)
+		pbar.close()
+		
+	return status
