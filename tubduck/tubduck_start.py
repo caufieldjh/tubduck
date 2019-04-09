@@ -56,6 +56,11 @@ B. Graph methods
 	5. Concept graph assembly
 '''
 
+'''
+Considering switching from py2neo to the official Neo4j Bolt drivers:
+https://github.com/neo4j/neo4j-python-driver
+'''
+
 import os
 import subprocess
 import time
@@ -328,10 +333,10 @@ def process_mo(infilename, inpath, outpath):
 							outfile.write(str(entry) + "\n")
 						entry = {}
 					if text[0].strip() in ["RECTYPE","MH","AQ","ENTRY","MN","PA"]:
-						if text[0] in entry.keys(): #Have it already
-							entry[text[0]].append(text[1].strip())
+						if text[0].strip() in entry.keys(): #Have it already
+							entry[text[0].strip()].append(text[1].strip())
 						else:
-							entry[text[0]] = [text[1].strip()]
+							entry[text[0].strip()] = [text[1].strip()]
 					pbar.update(1)
 				if len(entry.keys()) > 0: #Write the last entry
 					outfile.write(str(entry) + "\n")
@@ -491,14 +496,17 @@ def populate_graphdb():
 	
 	status = False
 	
+	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
+	
 	print("Populating graph DB...")
 	
-	#Load each KB, then load its relations. Loading is KB-specific.
+	#Load each KB, then load its relations.
 	#Note that not every dict entry is a valid relation.
+	i = 0
 	for kb in KB_NAMES:
 		kb_rels = []
 		infilename = KB_NAMES[kb].split(".")[0] + "-proc"
-		print("Loading %s..." % infilename)
+		print("Loading entries from %s..." % infilename)
 		pbar = tqdm(unit=" entries")
 		infilepath = KB_PROC_PATH / infilename
 		with infilepath.open('r') as infile:
@@ -506,5 +514,41 @@ def populate_graphdb():
 				kb_rels.append(ast.literal_eval(line.rstrip()))
 				pbar.update(1)
 		pbar.close()
+		
+		print("Loading relevant nodes and relations into graph DB...")
+		# Now we do KB-specific parsing.
+		if kb == "do":
+			pbar = tqdm(unit=" added")
+			for entry in kb_rels:
+				tx = graph.begin()
+				node1 = Node("Disease",name=entry["id"])
+				tx.create(node1)
+				tx.commit()
+				pbar.update(1)
+			pbar.close()
+			
+		# if kb == "mo":
+			# pbar = tqdm(unit=" added")
+			# for entry in kb_rels:
+				# tx = graph.begin()
+				# node1 = Node("Concept",name=entry["id"])
+				# tx.create(node1)
+				# tx.commit()
+				# pbar.update(1)
+			# pbar.close()
+			
+		# if kb == "sl":
+			# pbar = tqdm(unit=" added")
+			# for entry in kb_rels:
+				# tx = graph.begin()
+				# node1 = Node("Concept",name=entry["entry"])
+				# tx.create(node1)
+				# tx.commit()
+				# pbar.update(1)
+			# pbar.close()
+		
+		i = i+1
+		if i == len(KB_NAMES):
+			status = True
 		
 	return status
