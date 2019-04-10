@@ -63,6 +63,7 @@ https://github.com/neo4j/neo4j-python-driver
 
 import os
 import subprocess
+import sys
 import time
 #import resource #for raising open file limits as per Neo4j
 
@@ -123,13 +124,17 @@ def setup_checks():
 			setup_list.append("process some knowledge bases")
 	else:
 		setup_list.append("process all knowledge bases")
-		
+	
+	graph_exists = True
 	if not graphdb_exists():
 		setup_list.append("set up graph DB")
-		
-	gdb_vals = graphdb_stats()
-	if gdb_vals["rel_count"] < 2:
 		setup_list.append("populate graph DB")
+		graph_exists = False
+	
+	if graph_exists:
+		gdb_vals = graphdb_stats()
+		if gdb_vals["rel_count"] < 2:
+			setup_list.append("populate graph DB")
 
 	return setup_list
 	
@@ -469,7 +474,8 @@ def start_neo4j():
 	'''Checks if the Neo4j server is running, and if not, 
 	starts it.
 	Note that this is specifically whether the superuser is running
-	the server, not a different user running it locally.'''
+	the server, not a different user running it locally.
+	Note this will fail completely if Neo4j is not installed!'''
 	
 	status = False
 	
@@ -480,6 +486,9 @@ def start_neo4j():
 		subprocess.run(["sudo", "neo4j", "start"])
 		time.sleep(5) #Take a few moments to let service start
 		status = True
+	elif out.rstrip() == b"sudo: neo4j: command not found": #Not installed
+		print("Neo4j may not be installed on this system.")
+		sys.exit()
 	else:
 		status = True
 		
