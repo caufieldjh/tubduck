@@ -58,7 +58,6 @@ B. Graph methods
 
 '''
 Now:
-Check for duplicates before adding nodes or relation (i.e., add all as unique).
 Add relations more intelligently.
 Add more material to concept graph (Reactome pathways and constituent proteins).
 Load and add baseline instance graph material (IntAct PPI).
@@ -339,7 +338,7 @@ def process_mo(infilename, inpath, outpath):
 						if len(entry.keys()) > 0: #If we have a previous entry, write it
 							outfile.write(str(entry) + "\n")
 						entry = {}
-					if text[0].strip() in ["RECTYPE","MH","AQ","ENTRY","MN","PA"]:
+					if text[0].strip() in ["RECTYPE","MH","AQ","ENTRY","MN","PA","UI"]:
 						if text[0].strip() in entry.keys(): #Have it already
 							entry[text[0].strip()].append(text[1].strip())
 						else:
@@ -543,35 +542,55 @@ def populate_graphdb():
 		print("Loading relevant nodes and relations into graph DB...")
 		# Now we do KB-specific parsing.
 		if kb == "do":
-			pbar = tqdm(unit=" added")
-			statement = "CREATE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
+			pbar = tqdm(unit=" nodes added")
+			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
 			with driver.session() as session:
 				for entry in kb_rels:
 					try:
-						session.run(statement, {"name": entry["name"], "kb_id": entry["id"], "source": "Disease Ontology"})
+						name1 = entry["name"][0]
+						session.run(statement, {"name": name1, "kb_id": entry["id"][0], "source": "Disease Ontology"})
+						if "is_a" in entry.keys():
+							name2 = ((entry["is_a"][0]).split("!")[1]).strip()
+							session.run("MATCH (a:Disease {name: $name1}), (b:Disease {name: $name2}) "
+										"MERGE (a)-[r:is_a]->(b)", name1=name1, name2=name2)
 						pbar.update(1)
 					except KeyError: #Discard this entry
 						pass
 			pbar.close()
 			
-		# if kb == "mo":
-			# pbar = tqdm(unit=" added")
-			# for entry in kb_rels:
-				# tx = graph.begin()
-				# node1 = Node("Concept",name=entry["id"])
-				# tx.create(node1)
-				# tx.commit()
-				# pbar.update(1)
-			# pbar.close()
+		if kb == "mo":	#Ideally MeSH should be parsed hierarchically to produce is_a rels
+			pbar = tqdm(unit=" nodes added")
+			statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
+			with driver.session() as session:
+				for entry in kb_rels:
+					try:
+						name1 = entry["MH"][0]
+						session.run(statement, {"name": name1, "kb_id": entry["UI"][0], "source": "MeSH 2019"})
+						if "PA" in entry.keys():
+							for item in entry["PA"]:
+								name2 = item
+								session.run("MATCH (a:Concept {name: $name1}), (b:Concept {name: $name2}) "
+										"MERGE (a)-[r:has_pharmacologic_action]->(b)", name1=name1, name2=name2)
+						pbar.update(1)
+					except KeyError: #Discard this entry
+						pass
+			pbar.close()
 			
 		# if kb == "sl":
-			# pbar = tqdm(unit=" added")
-			# for entry in kb_rels:
-				# tx = graph.begin()
-				# node1 = Node("Concept",name=entry["entry"])
-				# tx.create(node1)
-				# tx.commit()
-				# pbar.update(1)
+			# pbar = tqdm(unit=" nodes added")
+			# statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
+			# with driver.session() as session:
+				# for entry in kb_rels:
+					# try:
+						# name1 = entry["name"][0]
+						# session.run(statement, {"name": name1, "kb_id": entry["id"][0], "source": "Semantic Lexicon"})
+						# if "is_a" in entry.keys():
+							# name2 = ((entry["is_a"][0]).split("!")[1]).strip()
+							# session.run("MATCH (a:Concept {name: $name1}), (b:Disease {name: $name2}) "
+										# "MERGE (a)-[r:is_a]->(b)", name1=name1, name2=name2)
+						# pbar.update(1)
+					# except KeyError: #Discard this entry
+						# pass
 			# pbar.close()
 		
 		i = i+1
