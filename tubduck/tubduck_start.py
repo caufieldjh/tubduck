@@ -57,8 +57,11 @@ B. Graph methods
 '''
 
 '''
-Considering switching from py2neo to the official Neo4j Bolt drivers:
-https://github.com/neo4j/neo4j-python-driver
+Now:
+Check for duplicates before adding nodes or relation (i.e., add all as unique).
+Add relations more intelligently.
+Add more material to concept graph (Reactome pathways and constituent proteins).
+Load and add baseline instance graph material (IntAct PPI).
 '''
 
 import os
@@ -77,6 +80,8 @@ from tqdm import *
 
 import py2neo
 from py2neo import Graph, Node, Relationship
+
+from neo4j import GraphDatabase
 
 ## Constants
 TOTAL_KBS = 3 #The total count of knowledge bases we'll use
@@ -399,28 +404,31 @@ def create_graphdb():
 	
 	status = False
 	
-	#Only really need to do the next few things once
+	#Only really need to set password once, but before starting Neo4j the first time
+	#So we need to restart its server
 	subprocess.run(["sudo","neo4j-admin", "set-initial-password", "tubduck"])
 	start_neo4j()
 	#resource.setrlimit(resource.RLIMIT_NOFILE, (100000, 100000))
 	
 	#try:
-	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
-	graph.delete_all() #Clear anything that already exists
+	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+	statement = "CREATE (a:Concept {name:{name}, source:{source}})"
 	
-	tx = graph.begin()
-	node1 = Node("Concept",name="protein")
-	tx.create(node1)
-	node2 = Node("Concept",name="biomolecule")
-	rel1 = Relationship(node1,"is_a",node2)
-	tx.create(rel1)
-	tx.commit()
-	
-	if graph.exists(rel1):
+	with driver.session() as session:
+		tx = session.begin_transaction()
+		tx.run("MATCH (n) DETACH DELETE n") #Clear anything that already exists
+		
+		tx.run(statement, {"name": "protein", "source": "NA"})
+		tx.run(statement, {"name": "biomolecule", "source": "NA"})
+		tx.run("MATCH (a:Concept),(b:Concept) "
+				"WHERE a.name = 'protein' AND b.name = 'biomolecule' " 
+				"CREATE (a)-[r:is_a]->(b)")
+		tx.commit()
+
 		print("Graph DB created: access at http://localhost:7474")
 		status = True
-	else:
-		print("Encountered an error in graph DB setup: could not create relation.")
+		
+	#print("Encountered an error in graph DB setup: could not create relation.")
 		
 	# except Exception as e:
 		# print("**Encountered an error in Neo4j graph DB setup: %s" % e)
@@ -432,8 +440,8 @@ def create_graphdb():
 def graphdb_exists():
 	'''Checks to see if the Neo4j database exists.
 	It may be available for the local user or at the system level.
-	Don't do anything with it yet.
-	Returns True if it exists, even if it's empty.'''
+	Returns True if it exists, even if it's empty,
+	because we don't do anything with the DB here.'''
 	
 	status = False
 	
@@ -448,6 +456,8 @@ def graphdb_exists():
 			if len(ndb_files) > 0:
 				print("Found existing Neo4j database at %s." % path)
 				status = True
+	if not status:
+		print("Did not find existing Neo4j database.")
 		
 	return status
 	
@@ -459,10 +469,14 @@ def graphdb_stats():
 	
 	start_neo4j()
 	
-	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
-	graph_data = graph.run("MATCH ()-->() RETURN count(*)").data()
+	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+	
+	with driver.session() as session:
+		graph_data = session.run("MATCH ()-->() RETURN count(*)").data()
+		
 	rel_count = graph_data[0]["count(*)"]
 	graphdb_values["rel_count"] = rel_count
+	
 	if rel_count < 2:
 		print("Neo4j database requires population.")
 	else:
@@ -472,7 +486,7 @@ def graphdb_stats():
 
 def start_neo4j():
 	'''Checks if the Neo4j server is running, and if not, 
-	starts it.
+	starts it. If it's already running it gets restarted.
 	Note that this is specifically whether the superuser is running
 	the server, not a different user running it locally.
 	Note this will fail completely if Neo4j is not installed!'''
@@ -488,7 +502,12 @@ def start_neo4j():
 		status = True
 	elif out.rstrip() == b"sudo: neo4j: command not found": #Not installed
 		print("Neo4j may not be installed on this system.")
+		status = False
 		sys.exit()
+	elif (out.rstrip())[1:16] == b"Neo4j is running": #Try restarting it
+		subprocess.run(["sudo", "neo4j", "restart"])
+		time.sleep(5) #Take a few moments to let service start
+		status = True
 	else:
 		status = True
 		
