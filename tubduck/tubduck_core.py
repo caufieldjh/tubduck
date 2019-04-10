@@ -19,7 +19,6 @@ __author__= "Harry Caufield"
 __email__ = "jcaufield@mednet.ucla.edu"
 
 import sys
-import colorama
 
 #import nltk
 
