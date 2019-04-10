@@ -78,9 +78,6 @@ import urllib.error
 from pathlib import Path
 from tqdm import *
 
-import py2neo
-from py2neo import Graph, Node, Relationship
-
 from neo4j import GraphDatabase
 
 ## Constants
@@ -524,7 +521,7 @@ def populate_graphdb():
 	
 	status = False
 	
-	graph = Graph('http://neo4j:tubduck@localhost:7474/db/data/')
+	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
 	
 	print("Populating graph DB...")
 	
@@ -547,12 +544,14 @@ def populate_graphdb():
 		# Now we do KB-specific parsing.
 		if kb == "do":
 			pbar = tqdm(unit=" added")
-			for entry in kb_rels:
-				tx = graph.begin()
-				node1 = Node("Disease",name=entry["id"])
-				tx.create(node1)
-				tx.commit()
-				pbar.update(1)
+			statement = "CREATE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
+			with driver.session() as session:
+				for entry in kb_rels:
+					try:
+						session.run(statement, {"name": entry["name"], "kb_id": entry["id"], "source": "Disease Ontology"})
+						pbar.update(1)
+					except KeyError: #Discard this entry
+						pass
 			pbar.close()
 			
 		# if kb == "mo":
