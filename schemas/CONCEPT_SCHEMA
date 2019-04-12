@@ -1,0 +1,12 @@
+Name	Type	Sources	Properties	Description
+Concept	Entity	Any	name, source	An entity of unassigned type.
+Protein	Entity	UniProtKB	name, source	A single protein or peptide.
+Disease	Entity	Disease Ontology	name, source	A human disease, or a model of that disease in a model organism. Follows the Disease Ontology, https://www.ebi.ac.uk/ols/ontologies/doid
+MeSH	Entity	MeSH	name, source	One MeSH term, by its UI. Included for linking purposes. May overlap with other entities; has corresponding is_a relationship where possible.
+ICD-10-CM	Entity	ICD-10-CM	name, source	One ICD-10-CM code. Included for linking purposes. May include signs and symptoms. May overlap with Disease; has corresponding is_a relationship where possible. See https://www.cdc.gov/nchs/icd/icd10cm.htm
+Pathway	Entity	Reactome	name, source	A pathway defined by Reactome (https://reactome.org/), referred to using Reactome pathway ID
+is_a	Relation	Any	source	Entity A is identical to or is a subset of Entity B. Can be explicitly stated in a source, inherited from hierarchy (one level only), derived from cross-links, or stated in some other fashion.
+interacts_with	Relation	Any	source	Any type of protein-protein interaction as defined by PSI-MI and of any of the interaction detection methods defined in the Molecular Interactions Controlled Vocabulary, https://www.ebi.ac.uk/ols/ontologies/mi/terms?iri=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2FMI_0001
+disruption_associated_with	Relation	Any	source	A deficiency of a protein, or a lack of functional copies of this protein, is associated with a disease. This may be for any reason including mutation, deletion, or other disruption of the underlying gene, transcript, or the protein itself.
+participates_in	Relation	Any	source	A protein participates in a larger structure or concept, including a Pathway. Note distinction vs. is_a in that this relation is for group membership.
+has_pharmacologic_action	Relation	MeSH	source	A description of how a compound behaves in the body or the environment.

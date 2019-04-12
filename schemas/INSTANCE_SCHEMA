@@ -1,0 +1,7 @@
+Name	Type	Sources	Properties	Description
+Concept	Entity	Any	name, source-doc	An entity of unassigned type.
+Patient	Entity	Source Document	id-doc, source-doc	A single patient from a clinical narrative, introduced only through the order of their introduction in the document. ID takes the form [PMID]-[count].
+Disease	Entity	Disease Ontology	name, source-doc	A disease diagnosed in a human patient. Follows the Disease Ontology, https://www.ebi.ac.uk/ols/ontologies/doid
+MeSH-doc	Entity	MeSH	name, source-doc	One MeSH term, by its UI, corresponding to a source document. Included for linking purposes. May overlap with other entities; has corresponding is_a relationship where possible.
+ICD-10-CM-doc	Entity	ICD-10-CM	name, source-doc	One ICD-10-CM code presented  See https://www.cdc.gov/nchs/icd/icd10cm.htm
+diagnosed_with	Relation		source-doc	A patient was observed to have a disease or a corresponding ICD-10-CM code. This can be true for any point in the case report, including a patient’s history.
