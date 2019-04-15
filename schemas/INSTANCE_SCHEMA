@@ -1,23 +1,53 @@
 Name	Type	Sources	Properties	Description
-Concept	Entity	Any	name, source-doc	An entity of unassigned type.
-Patient	Entity	Source Document	id-doc, source-doc	A single patient from a clinical narrative, introduced only through the order of their introduction in the document. ID takes the form [PMID]-[count].
-Disease_disorder	Entity (Event)	Disease Ontology	name, source-doc	A disease diagnosed in a human patient. Should be normalized to Disease Ontology, https://www.ebi.ac.uk/ols/ontologies/doid
+Activity	Entity (Event)	Source Document	name, source-doc, polarity, trend	Patient actions and habits.
+Administration	Entity	Source Document	text, source-doc, polarity, trend	Mode of administration of a drug or other therapy.
+after	Relation	Source Document	source-doc	Temporal relation. Annotations use these to connect events but should be inherited by Timeframe nodes.
+Age	Entity	Source Document	text, value, source-doc, polarity, trend	Demographics.
+Area	Entity	Source Document	text, value, unit, source-doc, polarity, trend	Any area value.
+before	Relation	Source Document	source-doc	Temporal relation. Annotations use these to connect events but should be inherited by Timeframe nodes.
+Biological_structure	Entity	Source Document	text, source-doc, polarity, trend	Any part of the body, from the cellular level to general areas.
+cause	Relation	Source Document	source-doc	A relationship of cause and effect. Only used when stated explicitly in the document.
+Clinical_event	Entity (Event)	Source Document	name, source-doc, polarity, trend	A clinical activity other than a medical procedure, often involving a change of Nonbiological_location.
+Color	Entity	Source Document	text, source-doc, polarity, trend	A color.
+Concept	Entity	Any	name, source-doc, polarity, trend	An entity of unassigned type.
+Date	Entity (Event)	Source Document	name, source-doc, polarity, trend	A time expression ending at a specific point in time. Note that these may be very similar to durations but have discrete endpoints and may describe events that did not occur continuously during the specified time (i.e., A happened, then B happened on this date).
+decrease_from	Relation	Source Document	source-doc	A relation describing a numerical change between two values or states.
+decrease_to	Relation	Source Document	source-doc	A relation describing a numerical change between two values or states.
+Detailed_description	Entity	Source Document	text, source-doc, polarity, trend	Any detail of an event or other entitiy.
 diagnosed_with	Relation	Source Document	source-doc	A patient was observed to have a disease or a corresponding ICD-10-CM code. This can be true for any point in the case report, including a patient’s history.
-Lab_value	Entity (Event)	Source Document	source-doc	Any result of a diagnostic test. May be quantitative or qualitative. Usually modifies a Diagnostic_procedure.
-Medication	Entity (Event)	Source Document	source-doc	Any pharmaceutical treatment. Frequently used with Administration and Dosage entities.
-Diagnostic_procedure	Entity (Event)	Source Document		Any procedure done primarily in order to obtain more information. This includes physical examinations, imaging, lab tests, and diagnostic screens for specific conditions
-Therapeutic_procedure	Entity (Event)	Source Document		Any procedure done primarily in order to address or alleviate a symptom or disease. This includes surgery, long-term therapies, and procedures done to support therapies (e.g., intubation).
-Sign_symptom	Entity (Event)	Source Document		Any symptom or clinical finding.
-is_a	Relation	Any		Entity A is identical to or is a subset of Entity B, where Entity B is a concept, e.g., a symptom corresponds to a specific ICD-10 code
-Date	Entity (Event)			A time expression ending at a specific point in time. Note that these may be very similar to durations but have discrete endpoints and may describe events that did not occur continuously during the specified time (i.e., A happened, then B happened on this date).
-Time	Entity (Event)			A time expression describing a specific point within a 24-hour period.
-Duration	Entity (Event)			A time expression describing a period of time. This expression generally specifies that an event has occurred continuously over the given duration.
-Activity	Entity (Event)			Patient actions and habits.
-Clinical_event	Entity (Event)			A clinical activity other than apresented, transferred, admitted, dischargedmedical procedure, often involvinga change ofNonbiological_location.
-Outcome	Entity (Event)			The patient’s clinical outcome.May not be present in thedocument.
-Other_event	Entity (Event)			Any event that appears clinicallyrelevant but fails to fit in any of theabove categories. Please add adescription in the Notes sectionwhen using this label.
-Age				Demographics.
-Sex				Demographics.
-Personal_background				Demographics. Includes any description of ethnic or national background.
-History				Demographics. Descriptions of the patient’s medical history.
-Occupation				Any general description of the patient’s daily activities.
+Diagnostic_procedure	Entity (Event)	Source Document	name, source-doc, polarity, trend	Any procedure done primarily in order to obtain more information. This includes physical examinations, imaging, lab tests, and diagnostic screens for specific conditions
+Disease_disorder	Entity (Event)	Source Document	name, source-doc, polarity, trend	A disease diagnosed in a human patient. Should be normalized to Disease Ontology, https://www.ebi.ac.uk/ols/ontologies/doid
+Distance	Entity	Source Document	text, value, unit, source-doc, polarity, trend	Length, width, height, or other 1-dimensional attributes.
+Dosage	Entity	Source Document	text, value, unit, source-doc, polarity, trend	Complex numerical description describing dosage of a drug, radiation therapy, or other therapy. At minimum, includes an amount and a frequency. Sometimes expressed by weight.
+Duration	Entity (Event)	Source Document	name, source-doc, polarity, trend	A time expression describing a period of time. This expression generally specifies that an event has occurred continuously over the given duration.
+Family_history	Entity	Source Document	text, source-doc, polarity, trend	Demographics. Descriptions of the patient’s family’s medical history. Text may overlap with other entities.
+Frequency	Entity	Source Document	text, source-doc, polarity, trend	An expression describing how often a particular event occurred.
+History	Entity	Source Document	text, source-doc, polarity, trend	Demographics. Descriptions of the patient’s medical history. Text may overlap with other entities.
+identical	Relation	Any	source-doc	Entity A is identical to Entity B. Contrast vs. is_a relations used in the concept graph.
+increase_from	Relation	Source Document	source-doc	A relation describing a numerical change between two values or states.
+increase_to	Relation	Source Document	source-doc	A relation describing a numerical change between two values or states.
+Lab_value	Entity (Event)	Source Document	name, source-doc, polarity, trend	Any result of a diagnostic test. May be quantitative or qualitative. Usually modifies a Diagnostic_procedure.
+Mass	Entity	Source Document	text, value, unit, source-doc, polarity, trend	Any mass (of an object, not just an abnormal mass or lesion in the body).
+Medication	Entity (Event)	Source Document	name, source-doc, polarity, trend	Any pharmaceutical treatment. Frequently used with Administration and Dosage entities.
+modify	Relation	Source Document	source-doc	A generic relationship in which one entity modifies another entity or event, including instances where one event results from another (usually a Lab_value resulting from a Diagnostic_procedure; e.g., clinical examination ← tachypnea). This second case is to account for variability in reporting diagnostic results vs. other events.
+Nonbiological_location	Entity	Source Document	text, source-doc, polarity, trend	Any physical location other than those on or within a patient’s body.
+Occupation	Entity	Source Document	text, source-doc, polarity, trend	Any general description of the patient’s daily activities.
+Other_entity	Entity	Source Document	text, source-doc, polarity, trend	Any entity that has clinical relevance but fails to fit in any Entity category.
+Other_event	Entity (Event)	Source Document	name, source-doc, polarity, trend	Any event that appears clinically relevant but fails to fit in any Entity (Event) category.
+Outcome	Entity (Event)	Source Document	name, source-doc, polarity, trend	The patient’s clinical outcome. May not be present in the document.
+overlap	Relation	Source Document	source-doc	Temporal relation. Annotations use these to connect events but should be inherited by Timeframe nodes.
+Patient	Entity (Subject)	Source Document	id-doc, source-doc, polarity, trend	A single patient from a clinical narrative, identified through the order of their introduction in the document relative to all other Subject entities. ID takes the form [PMID]-[count].
+Personal_background	Entity	Source Document	text, source-doc, polarity, trend	Demographics. Includes any description of ethnic or national background.
+Qualitative_concept	Entity	Source Document	text, source-doc, polarity, trend	A detail of an event or other entity describing it in general terms; this is a general category so another label is often preferred.
+Quantitiative_concept	Entity	Source Document	text, source-doc, polarity, trend	A numerical value; this is a general category so another label is often preferred.
+Severity	Entity	Source Document	text, source-doc, polarity, trend	Degree of a disease or symptom’s severity.
+Sex	Entity	Source Document	text, value, source-doc, polarity, trend	Demographics.
+Shape	Entity	Source Document	text, source-doc, polarity, trend	A shape.
+Sign_symptom	Entity (Event)	Source Document	name, source-doc, polarity, trend	Any symptom or clinical finding.
+sub_procedure	Relation	Source Document	source-doc	A relationship in which one procedure is performed as a component of another, rather than a new procedure in its own right. May be redundant vs. content in concept graph.
+Subject	Entity (Subject)	Source Document	id-doc, source-doc, polarity, trend	Any individual other than the patient identified within a clinical narrative, in an order relative to all other Subject entities. ID takes the form [PMID]-[count].
+Texture	Entity	Source Document	text, source-doc, polarity, trend	A texture.
+Therapeutic_procedure	Entity (Event)	Source Document	name, source-doc, polarity, trend	Any procedure done primarily in order to address or alleviate a symptom or disease. This includes surgery, long-term therapies, and procedures done to support therapies (e.g., intubation).
+Time	Entity (Event)	Source Document	name, source-doc, polarity, trend	A time expression describing a specific point within a 24-hour period.
+Timeframe	Entity (Timeframe)	NA	source-doc, polarity, trend	A dummy node representing events occurring within the same general time period. Depends upon understanding of time expressions in Date, Time, and Duration entities.
+Volume	Entity	Source Document	text, value, unit, source-doc, polarity, trend	Any volume, including that of body fluids.
