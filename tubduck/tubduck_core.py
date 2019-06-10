@@ -18,7 +18,7 @@ and cardiovascular clinial case reports.
 __author__= "Harry Caufield"
 __email__ = "jcaufield@mednet.ucla.edu"
 
-import sys
+import sys, argparse
 
 #import nltk
 
@@ -29,6 +29,10 @@ import tubduck_process as tproc
 import tubduck_output as toutput
 
 ## Constants and Options
+parser = argparse.ArgumentParser()
+parser.add_argument("--empty_db", help="empty the TUBDUCK Neo4j DB", 
+					action="store_true")
+args = parser.parse_args()
 
 ## Classes
 
@@ -37,10 +41,15 @@ import tubduck_output as toutput
 ## Main
 def main():
 	
+	#Check to see if there are command line arguments first
+	tasks = [] #All user-specified tasks will go here
+	if args.empty_db:
+		tasks.append("empty_db")
+	
 	print("*** TUBDUCK ***")
 	
 	print("Checking to see what setup may be required.")
-	setup_to_do = tstart.setup_checks()
+	setup_to_do = tstart.setup_checks(tasks)
 	if len(setup_to_do) > 0:
 		print("Performing intial setup for: \n* %s" % ("\n* ".join(setup_to_do)))
 		if tstart.setup(setup_to_do):

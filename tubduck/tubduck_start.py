@@ -57,7 +57,7 @@ B. Graph methods
 '''
 
 '''
-Now:
+TBD:
 Add relations more intelligently.
 Add more material to concept graph (Reactome pathways and constituent proteins).
 Load and add baseline instance graph material (IntAct PPI).
@@ -91,11 +91,12 @@ KB_NAMES = {"do": "doid.obo",		#The set of all knowledge bases,
 				"sl": "LEXICON"}
 
 ## Functions
-def setup_checks():
+def setup_checks(tasks):
 	'''Check to see which setup steps need to be completed.
 		This is primarily based on what files already exist.
 		Returns list of strings, where each item denotes a task to 
-		be completed before proceeding.'''
+		be completed before proceeding.
+		The user may have specified some additional tasks to complete.'''
 		
 	setup_list = []
 	working_files = []
@@ -128,6 +129,8 @@ def setup_checks():
 	
 	graph_exists = True
 	if not graphdb_exists():
+		if "empty_db" in tasks:
+			sys.exit("Empty database requested but DB does not exist. Exiting...")
 		setup_list.append("set up graph DB")
 		setup_list.append("populate graph DB")
 		graph_exists = False
@@ -136,6 +139,8 @@ def setup_checks():
 		gdb_vals = graphdb_stats()
 		if gdb_vals["rel_count"] < 2:
 			setup_list.append("populate graph DB")
+		if "empty_db" in tasks:
+			setup_list.append("empty graph DB")
 
 	return setup_list
 	
@@ -201,6 +206,11 @@ def setup(setup_to_do):
 	if "populate graph DB" in setup_to_do:
 		if not populate_graphdb():
 			print("Encountered errors while populating graph database.")
+			status = False
+	
+	if "empty graph DB" in setup_to_do:
+		if not empty_graphdb():
+			print("Encountered errors while emptying graph database.")
 			status = False
 			
 	return status
@@ -596,5 +606,27 @@ def populate_graphdb():
 		i = i+1
 		if i == len(KB_NAMES):
 			status = True
+		
+	return status
+	
+def empty_graphdb():
+	'''Clears all entities and relations from the graph DB.
+	Returns True if it completes without error.'''
+	
+	status = False
+	
+	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+	
+	print("Will empty all contents from graph DB.")
+	print("Please note that the database can be removed entirely by "
+			"stopping Neo4j and deleting the graph.db file.")
+	print("Clearing all contents from graph DB...")
+	
+	with driver.session() as session:
+		session.run("MATCH ()-[r]-() DELETE r")
+		session.run("MATCH (n) DELETE n ")
+	
+	print("Complete.")
+	status = True
 		
 	return status
