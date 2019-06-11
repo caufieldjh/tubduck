@@ -58,7 +58,9 @@ B. Graph methods
 
 '''
 TBD:
-Add relations more intelligently.
+Populate with ICD and relevant relationships.
+Then, cross-link the ontologies where possible to find identical terms (via xlinks, like those in DO).
+Finally, load at least one CCR into the DB and attempt to link it to the concept graph.
 Add more material to concept graph (Reactome pathways and constituent proteins).
 Load and add baseline instance graph material (IntAct PPI).
 '''
@@ -71,6 +73,8 @@ import time
 
 import ast
 
+from bs4 import BeautifulSoup
+
 from urllib.request import urlopen
 import urllib.error
 
@@ -80,15 +84,16 @@ from tqdm import *
 from neo4j import GraphDatabase
 
 ## Constants
-TOTAL_KBS = 3 #The total count of knowledge bases we'll use
+TOTAL_KBS = 4 #The total count of knowledge bases we'll use
 				#To be specified in more detail later
 WORKING_PATH = Path('../working')
 KB_PATH = Path('../working/kbs')
 KB_PROC_PATH = Path('../working/kbs/processed')
 
-KB_NAMES = {"do": "doid.obo",		#The set of all knowledge bases,
-				"mo": "d2019.bin",  #with two-letter codes as keys.
-				"sl": "LEXICON"}
+KB_NAMES = {"don": "doid.obo",		#The set of all knowledge bases,
+				"m19": "d2019.bin",  #with three-letter codes as keys.
+				"slx": "LEXICON",
+				"i10": "icd10cm_tabular_2019.xml"}
 
 ## Functions
 def setup_checks(tasks):
@@ -151,7 +156,7 @@ def setup(setup_to_do):
 		
 	setup_all = True #Default is to set up everything
 	status = True
-	kb_codes = ["do","mo","sl"] #Knowledge bases each get two-char code
+	kb_codes = KB_NAMES.keys() #Knowledge bases each get code
 	kb_proc_codes = kb_codes
 		
 	if "working directory" in setup_to_do:
@@ -167,12 +172,9 @@ def setup(setup_to_do):
 	if "retrieve some knowledge bases" in setup_to_do:
 		kb_files = [x.stem for x in KB_PATH.iterdir()]
 		need_kb_files = []
-		if "doid" not in kb_files:
-			need_kb_files.append("do")
-		if "d2019" not in kb_files:
-			need_kb_files.append("mo")
-		if "LEXICON" not in kb_files:
-			need_kb_files.append("sl")
+		for kb in kb_codes:
+			if KB_NAMES[kb] not in kb_files:
+				need_kb_files.append(kb)
 		kb_codes = need_kb_files
 		if not get_kbs(kb_codes,KB_PATH):
 			print("Encountered errors while retrieving knowledge base files.")
@@ -188,11 +190,13 @@ def setup(setup_to_do):
 		kb_proc_files = [x.stem for x in KB_PROC_PATH.iterdir()]
 		need_kb_proc_files = []
 		if "doid-proc" not in kb_proc_files:
-			need_kb_proc_files.append("do")
+			need_kb_proc_files.append("don")
 		if "d2019-proc" not in kb_proc_files:
-			need_kb_proc_files.append("mo")
+			need_kb_proc_files.append("m19")
 		if "LEXICON-proc" not in kb_proc_files:
-			need_kb_proc_files.append("sl")
+			need_kb_proc_files.append("slx")
+		if "icd10cm_tabular_2019-proc" not in kb_proc_files:
+			need_kb_proc_files.append("i10")
 		kb_proc_codes = need_kb_proc_files
 		if not process_kbs(kb_proc_codes,KB_PATH,KB_PROC_PATH):
 			print("Encountered errors while processing knowledge base files.")
@@ -219,15 +223,12 @@ def get_kbs(names, path):
 	'''Retrieves knowledge bases in their full form from various remote 
 	locations. 
 	Takes a list of two-letter codes as input.
-	Also requires a Path where they will be written to. 
-	Retrieves one or more of the following:
-	 Disease Ontology (do)
-	 2018 MeSH term file from NLM (mo)
-	 2019 SPECIALIST Lexicon from NLM (sl).'''
+	Also requires a Path where they will be written to.'''
 	
-	data_locations = {"do": ("http://ontologies.berkeleybop.org/","doid.obo"),
-					"mo": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2019.bin"), 
-					"sl": ("https://lsg3.nlm.nih.gov/LexSysGroup/Projects/lexicon/2019/release/LEX/", "LEXICON")}
+	data_locations = {"don": ("http://ontologies.berkeleybop.org/","doid.obo"),
+					"m19": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2019.bin"), 
+					"slx": ("https://lsg3.nlm.nih.gov/LexSysGroup/Projects/lexicon/2019/release/LEX/", "LEXICON"),
+					"i10": ("ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2019/", "icd10cm_tabular_2019.xml")}
 	
 	filenames = []
 	status = True #Becomes False upon encountering error
@@ -260,7 +261,7 @@ def get_kbs(names, path):
 	
 def process_kbs(names, inpath, outpath):
 	'''Loads knowledge bases into memory.
-	Takes a list of two-letter codes as input.
+	Takes a list of kb codes as input.
 	Also requires a Path to the folder where they are AND where they
 	should go once processed.'''
 	
@@ -268,18 +269,23 @@ def process_kbs(names, inpath, outpath):
 	
 	#Processing methods are KB-specific as formats vary
 	for name in names:
-		if name == "do":
-			if process_do(KB_NAMES[name], inpath, outpath):
+		if name == "don":
+			if process_diseaseontology(KB_NAMES[name], inpath, outpath):
 				pass
 			else:
 				status = False
-		if name == "mo":
-			if process_mo(KB_NAMES[name], inpath, outpath):
+		if name == "m19":
+			if process_mesh(KB_NAMES[name], inpath, outpath):
 				pass
 			else:
 				status = False
-		if name == "sl":
-			if process_sl(KB_NAMES[name], inpath, outpath):
+		if name == "slx":
+			if process_semanticlexicon(KB_NAMES[name], inpath, outpath):
+				pass
+			else:
+				status = False
+		if name == "i10":
+			if process_icd10cm(KB_NAMES[name], inpath, outpath):
 				pass
 			else:
 				status = False
@@ -288,7 +294,7 @@ def process_kbs(names, inpath, outpath):
 	
 	return status
 
-def process_do(infilename, inpath, outpath):
+def process_diseaseontology(infilename, inpath, outpath):
 	'''Processes the Disease Ontology into relationship format.
 	Takes input from process_kbs.'''
 	
@@ -327,7 +333,7 @@ def process_do(infilename, inpath, outpath):
 
 	return status
 
-def process_mo(infilename, inpath, outpath):
+def process_mesh(infilename, inpath, outpath):
 	'''Processes MeSH into relationship format.
 	Takes input from process_kbs.'''
 	
@@ -364,7 +370,7 @@ def process_mo(infilename, inpath, outpath):
 
 	return status
 	
-def process_sl(infilename, inpath, outpath):
+def process_semanticlexicon(infilename, inpath, outpath):
 	'''Processes Semantic Lexicon into relationship format.
 	Takes input from process_kbs.'''
 	
@@ -400,9 +406,49 @@ def process_sl(infilename, inpath, outpath):
 		status = False
 
 	return status
+	
+def process_icd10cm(infilename, inpath, outpath):
+	'''Processes 2019 release of ICD-10-CM into relationship format.
+	Takes input from process_kbs.
+	The input file is the "tabular" version in XML format.
+	Uses the hierarchy to form is_a relations.
+	It's a bit messy as that involves lookback.
+	Doesn't assign chapter membership yet.'''
+	
+	status = True
+	
+	infilepath = inpath / infilename
+	newfilename = (str(infilename.split(".")[0])) + "-proc"
+	outfilepath = outpath / newfilename
+	print("Processing %s." % infilename)
+	try:
+		pbar = tqdm(unit=" entries")
+		with infilepath.open() as infile:
+			contents = infile.read()
+			soup = BeautifulSoup(contents,'xml')
+			diags = soup.find_all('diag')
+			with outfilepath.open("w") as outfile: 
+				for diag in diags:
+					cont = diag.contents
+					name = cont[1].contents
+					desc = cont[3].contents
+					
+					parent_diag = diag.parent
+					parent_cont = parent_diag.contents
+					parent_name = parent_cont[1].contents
+					
+					entry = {'id':name, 'name':desc, 'is_a':parent_name}
+					outfile.write(str(entry) + "\n")
+					pbar.update(1)
+		pbar.close()
+	except IOError as e:
+		print("Encountered an error while processing %s: %s" % (infilename, e))
+		status = False
+
+	return status
 
 def create_graphdb():
-	'''Sets up an empty Neo4j database through py2neo.
+	'''Sets up an empty Neo4j database.
 	Sets the initial password as Neo4j requires it.
 	(Note - this needs to happen BEFORE starting Neo4j.)
 	Populates the graph with initial nodes and relationships.
@@ -551,7 +597,7 @@ def populate_graphdb():
 		
 		print("Loading relevant nodes and relations into graph DB...")
 		# Now we do KB-specific parsing.
-		if kb == "do":
+		if kb == "don":
 			pbar = tqdm(unit=" nodes added")
 			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
 			with driver.session() as session:
@@ -568,7 +614,7 @@ def populate_graphdb():
 						pass
 			pbar.close()
 			
-		if kb == "mo":	#Ideally MeSH should be parsed hierarchically to produce is_a rels
+		if kb == "m19":	#Ideally MeSH should be parsed hierarchically to produce is_a rels
 			pbar = tqdm(unit=" nodes added")
 			statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
 			with driver.session() as session:
@@ -585,8 +631,27 @@ def populate_graphdb():
 					except KeyError: #Discard this entry
 						pass
 			pbar.close()
+		
+		#The following are just placeholders so I remember to load these KBs.
+		
+		# if kb == "slx":
+			# pbar = tqdm(unit=" nodes added")
+			# statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
+			# with driver.session() as session:
+				# for entry in kb_rels:
+					# try:
+						# name1 = entry["name"][0]
+						# session.run(statement, {"name": name1, "kb_id": entry["id"][0], "source": "Semantic Lexicon"})
+						# if "is_a" in entry.keys():
+							# name2 = ((entry["is_a"][0]).split("!")[1]).strip()
+							# session.run("MATCH (a:Concept {name: $name1}), (b:Disease {name: $name2}) "
+										# "MERGE (a)-[r:is_a]->(b)", name1=name1, name2=name2)
+						# pbar.update(1)
+					# except KeyError: #Discard this entry
+						# pass
+			# pbar.close()
 			
-		# if kb == "sl":
+		# if kb == "slx":
 			# pbar = tqdm(unit=" nodes added")
 			# statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
 			# with driver.session() as session:

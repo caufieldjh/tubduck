@@ -67,6 +67,8 @@ def main():
 	
 	print("Preparing output...")
 	#Run tubduck_output methods
+	
+	print("Done.")
 
 if __name__ == "__main__":
 	sys.exit(main())
