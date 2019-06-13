@@ -32,6 +32,8 @@ import tubduck_output as toutput
 parser = argparse.ArgumentParser()
 parser.add_argument("--empty_db", help="empty the TUBDUCK Neo4j DB", 
 					action="store_true")
+parser.add_argument("--test_load_db", help="load only a testing set (100 entries each) of each data source into the DB", 
+					action="store_true")
 args = parser.parse_args()
 
 ## Classes
@@ -45,6 +47,8 @@ def main():
 	tasks = [] #All user-specified tasks will go here
 	if args.empty_db:
 		tasks.append("empty_db")
+	if args.test_load_db:
+		tasks.append("test_load_db")
 	
 	print("*** TUBDUCK ***")
 	

@@ -143,13 +143,21 @@ def setup_checks(tasks):
 		if "empty_db" in tasks:
 			sys.exit("Empty database requested but DB does not exist. Exiting...")
 		setup_list.append("set up graph DB")
-		setup_list.append("populate graph DB")
+		if "test_load_db" in tasks:
+			setup_list.append("populate graph DB as test")
+		else:
+			setup_list.append("populate graph DB")
 		graph_exists = False
 	
 	if graph_exists:
 		gdb_vals = graphdb_stats()
+		if "test_load_db" in tasks:
+			print("Requested to load a test set but DB already populated.")
 		if gdb_vals["rel_count"] < 2:
-			setup_list.append("populate graph DB")
+			if "test_load_db" in tasks:
+				setup_list.append("populate graph DB as test")
+			else:
+				setup_list.append("populate graph DB")
 		if "empty_db" in tasks:
 			setup_list.append("empty graph DB")
 
@@ -213,8 +221,12 @@ def setup(setup_to_do):
 			print("Encountered errors while setting up graph database.")
 			status = False
 	
-	if "populate graph DB" in setup_to_do:
-		if not populate_graphdb():
+	if "populate graph DB" in setup_to_do or "populate graph DB as test" in setup_to_do:
+		if "populate graph DB as test" in setup_to_do:
+			test_only = True
+		else:
+			test_only = False
+		if not populate_graphdb(test_only):
 			print("Encountered errors while populating graph database.")
 			status = False
 		if not crosslink_graphdb():
@@ -574,24 +586,30 @@ def start_neo4j():
 		
 	return status
 	
-def populate_graphdb():
+def populate_graphdb(test_only):
 	'''Loads entities and relations into graph DB from processed KBs.
 	Most of these form the concept graph: they define conceptual
 	relationships, including "is a" relationships.
 	Initial contents of the instance graph are also included: these
 	relationships correspond to reported events within text, e.g.,
 	symptoms or diagnostics reported within clinical case reports.
+	The input variable test_only is a boolean; if True, a maximum of 100
+	nodes will be populated from each source.
 	Returns True if all population activities complete without error.'''
 	
 	status = False
 	
 	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
 	
+	max_node_count = 1000000 #The total number of nodes to create based on a single KB source.
+	if test_only:
+		max_node_count = 100
+	
 	print("Populating graph DB...")
 	
-	#Load each KB, then load its relations.
-	#Note that not every dict entry is a valid relation.
-	i = 0
+	#Load each KB as nodes/relations.
+	#Note that not every dict entry includes a valid relation.
+	j = 0
 	for kb in KB_NAMES:
 		kb_rels = []
 		infilename = KB_NAMES[kb].split(".")[0] + "-proc"
@@ -599,9 +617,14 @@ def populate_graphdb():
 		pbar = tqdm(unit=" entries")
 		infilepath = KB_PROC_PATH / infilename
 		with infilepath.open('r') as infile:
+			i = 0
 			for line in infile: #Go line-by-line to be careful
 				kb_rels.append(ast.literal_eval(line.rstrip()))
+				max_node_count
+				i = i+1
 				pbar.update(1)
+				if i == max_node_count:
+					break
 		pbar.close()
 		
 		print("Loading relevant nodes and relations into graph DB...")
@@ -610,6 +633,7 @@ def populate_graphdb():
 			pbar = tqdm(unit=" nodes added")
 			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
 			with driver.session() as session:
+				i = 0
 				for entry in kb_rels:
 					try:
 						name1 = entry["name"][0]
@@ -621,15 +645,19 @@ def populate_graphdb():
 								kb_id2 = (target.split("!")[0]).strip()
 								session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
 										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+						i = i+1
 						pbar.update(1)
+						if i == max_node_count:
+							break
 					except KeyError: #Discard this entry
 						pass
 			pbar.close()
 			
-		if kb == "m19":	#Ideally MeSH should be parsed hierarchically to produce is_a rels
+		if kb == "m19":	#MeSH is not yet parsed hierarchically to produce is_a rels
 			pbar = tqdm(unit=" nodes added")
 			statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
 			with driver.session() as session:
+				i = 0
 				for entry in kb_rels:
 					try:
 						name1 = entry["MH"][0]
@@ -639,12 +667,15 @@ def populate_graphdb():
 								name2 = item
 								session.run("MATCH (a:Concept {name: $name1}), (b:Concept {name: $name2}) "
 										"MERGE (a)-[r:has_pharmacologic_action]->(b)", name1=name1, name2=name2)
+						i = i+1
 						pbar.update(1)
+						if i == max_node_count:
+							break
 					except KeyError: #Discard this entry
 						pass
 			pbar.close()
 		
-		#The following are just placeholders so I remember to load these KBs.
+		#The following is just a placeholder so I remember to load this KBs
 		
 		# if kb == "slx":
 			# pbar = tqdm(unit=" nodes added")
@@ -667,6 +698,7 @@ def populate_graphdb():
 			pbar = tqdm(unit=" nodes added")
 			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
 			with driver.session() as session:
+				i = 0
 				for entry in kb_rels:
 					try:
 						name1 = entry["name"][0]
@@ -676,13 +708,16 @@ def populate_graphdb():
 							kb_id2 = entry["is_a"][0]
 							session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
 										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+						i = i+1
 						pbar.update(1)
+						if i == max_node_count:
+							break
 					except KeyError: #Discard this entry
 						pass
 			pbar.close()
 		
-		i = i+1
-		if i == len(KB_NAMES):
+		j = j+1
+		if j == len(KB_NAMES):
 			status = True
 		
 	return status
@@ -696,7 +731,8 @@ def crosslink_graphdb():
 	
 	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
 	
-	print("Adding cross-links to graph DB...")
+	print("Adding cross-links to graph DB...") #Doesn't do anything yet
+	status = True 
 	
 	return status
 
