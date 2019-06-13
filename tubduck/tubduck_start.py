@@ -58,11 +58,17 @@ B. Graph methods
 
 '''
 TBD:
-Populate with ICD and relevant relationships.
+Add test loading mode, as loading even DO+MeSH+ICD10 takes most of an hour.
+  Some of this may just require some optimization:
+    see https://medium.com/neo4j/cypher-query-optimisations-fe0539ce2e5c
+    tl;dr don't add nodes/rels one at a time, add as batch.
+  But also provide an option to just populate a few entries from each, to make sure parsing works.
+
 Then, cross-link the ontologies where possible to find identical terms (via xlinks, like those in DO).
 Finally, load at least one CCR into the DB and attempt to link it to the concept graph.
 Add more material to concept graph (Reactome pathways and constituent proteins).
 Load and add baseline instance graph material (IntAct PPI).
+Make it accessible! As a prototype.
 '''
 
 import os
@@ -210,6 +216,9 @@ def setup(setup_to_do):
 	if "populate graph DB" in setup_to_do:
 		if not populate_graphdb():
 			print("Encountered errors while populating graph database.")
+			status = False
+		if not crosslink_graphdb():
+			print("Encountered errors while adding cross-links to graph database.")
 			status = False
 	
 	if "empty graph DB" in setup_to_do:
@@ -604,11 +613,14 @@ def populate_graphdb():
 				for entry in kb_rels:
 					try:
 						name1 = entry["name"][0]
-						session.run(statement, {"name": name1, "kb_id": entry["id"][0], "source": "Disease Ontology"})
+						kb_id1 = entry["id"][0]
+						session.run(statement, {"name": name1, "kb_id": kb_id1, "source": "Disease Ontology"})
 						if "is_a" in entry.keys():
-							name2 = ((entry["is_a"][0]).split("!")[1]).strip()
-							session.run("MATCH (a:Disease {name: $name1}), (b:Disease {name: $name2}) "
-										"MERGE (a)-[r:is_a]->(b)", name1=name1, name2=name2)
+							targets = entry["is_a"] #May be multiple relationships
+							for target in targets:
+								kb_id2 = (target.split("!")[0]).strip()
+								session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
+										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
 						pbar.update(1)
 					except KeyError: #Discard this entry
 						pass
@@ -644,36 +656,50 @@ def populate_graphdb():
 						# session.run(statement, {"name": name1, "kb_id": entry["id"][0], "source": "Semantic Lexicon"})
 						# if "is_a" in entry.keys():
 							# name2 = ((entry["is_a"][0]).split("!")[1]).strip()
-							# session.run("MATCH (a:Concept {name: $name1}), (b:Disease {name: $name2}) "
+							# session.run("MATCH (a:Concept {name: $name1}), (b:Concept {name: $name2}) "
 										# "MERGE (a)-[r:is_a]->(b)", name1=name1, name2=name2)
 						# pbar.update(1)
 					# except KeyError: #Discard this entry
 						# pass
 			# pbar.close()
 			
-		# if kb == "slx":
-			# pbar = tqdm(unit=" nodes added")
-			# statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
-			# with driver.session() as session:
-				# for entry in kb_rels:
-					# try:
-						# name1 = entry["name"][0]
-						# session.run(statement, {"name": name1, "kb_id": entry["id"][0], "source": "Semantic Lexicon"})
-						# if "is_a" in entry.keys():
-							# name2 = ((entry["is_a"][0]).split("!")[1]).strip()
-							# session.run("MATCH (a:Concept {name: $name1}), (b:Disease {name: $name2}) "
-										# "MERGE (a)-[r:is_a]->(b)", name1=name1, name2=name2)
-						# pbar.update(1)
-					# except KeyError: #Discard this entry
-						# pass
-			# pbar.close()
+		if kb == "i10":
+			pbar = tqdm(unit=" nodes added")
+			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
+			with driver.session() as session:
+				for entry in kb_rels:
+					try:
+						name1 = entry["name"][0]
+						kb_id1 = entry["id"][0]
+						session.run(statement, {"name": name1, "kb_id": kb_id1, "source": "ICD-10-CM 2019"})
+						if "is_a" in entry.keys(): #All codes have one parent at most
+							kb_id2 = entry["is_a"][0]
+							session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
+										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+						pbar.update(1)
+					except KeyError: #Discard this entry
+						pass
+			pbar.close()
 		
 		i = i+1
 		if i == len(KB_NAMES):
 			status = True
 		
 	return status
+
+def crosslink_graphdb():
+	'''Adds cross-link relations to the graph DB.
+	Needs to happen after population as cross-link targets may not
+	exist yet otherwise.
+	Returns True if completed without errors.'''
+	status = False
 	
+	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+	
+	print("Adding cross-links to graph DB...")
+	
+	return status
+
 def empty_graphdb():
 	'''Clears all entities and relations from the graph DB.
 	Returns True if it completes without error.'''
