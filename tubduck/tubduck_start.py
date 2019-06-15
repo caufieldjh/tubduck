@@ -59,10 +59,10 @@ B. Graph methods
 '''
 TBD:
 Add test loading mode, as loading even DO+MeSH+ICD10 takes most of an hour.
-  Some of this may just require some optimization:
-    see https://medium.com/neo4j/cypher-query-optimisations-fe0539ce2e5c
-    tl;dr don't add nodes/rels one at a time, add as batch.
-  But also provide an option to just populate a few entries from each, to make sure parsing works.
+  Some of this may just require some optimization.
+  I've already fought with that for a bit,
+  but it seems like preparing nodes as a list and then using UNWIND
+  is more efficient than single operations.
 
 Then, cross-link the ontologies where possible to find identical terms (via xlinks, like those in DO).
 Finally, load at least one CCR into the DB and attempt to link it to the concept graph.
