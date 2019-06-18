@@ -58,6 +58,9 @@ B. Graph methods
 
 '''
 TBD:
+Process MeSH RDF with RDFLib:
+https://github.com/RDFLib
+
 Add test loading mode, as loading even DO+MeSH+ICD10 takes most of an hour.
   Some of this may just require some optimization.
   I've already fought with that for a bit,
@@ -71,10 +74,13 @@ Load and add baseline instance graph material (IntAct PPI).
 Make it accessible! As a prototype.
 '''
 
+import gzip
 import os
+import shutil
 import subprocess
 import sys
 import time
+
 #import resource #for raising open file limits as per Neo4j
 
 import ast
@@ -97,7 +103,7 @@ KB_PATH = Path('../working/kbs')
 KB_PROC_PATH = Path('../working/kbs/processed')
 
 KB_NAMES = {"don": "doid.obo",		#The set of all knowledge bases,
-				"m19": "d2019.bin",  #with three-letter codes as keys.
+				"m19": "mesh2019.nt.gz",  #with three-letter codes as keys.
 				"slx": "LEXICON",
 				"i10": "icd10cm_tabular_2019.xml"}
 
@@ -243,11 +249,11 @@ def setup(setup_to_do):
 def get_kbs(names, path):
 	'''Retrieves knowledge bases in their full form from various remote 
 	locations. 
-	Takes a list of two-letter codes as input.
+	Takes a list of codes as input.
 	Also requires a Path where they will be written to.'''
 	
 	data_locations = {"don": ("http://ontologies.berkeleybop.org/","doid.obo"),
-					"m19": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2019.bin"), 
+					"m19": ("ftp://ftp.nlm.nih.gov/online/mesh/rdf/2019/","mesh2019.nt.gz"), 
 					"slx": ("https://lsg3.nlm.nih.gov/LexSysGroup/Projects/lexicon/2019/release/LEX/", "LEXICON"),
 					"i10": ("ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2019/", "icd10cm_tabular_2019.xml")}
 	
@@ -295,8 +301,19 @@ def process_kbs(names, inpath, outpath):
 				pass
 			else:
 				status = False
-		if name == "m19":
-			if process_mesh(KB_NAMES[name], inpath, outpath):
+		if name == "m19": #this one needs decompression first
+			short_kb_name = (KB_NAMES[name])[:-3]
+			try:
+				infilepath = inpath / KB_NAMES[name]
+				outfilepath = inpath / short_kb_name
+				with gzip.open(infilepath, 'rb') as finput:
+					with open(outfilepath, 'wb') as foutput:
+						shutil.copyfileobj(finput,foutput)
+				infilepath.unlink()
+			except FileNotFoundError: #Might have already decompressed.
+				pass
+				
+			if process_mesh(short_kb_name, inpath, outpath):
 				pass
 			else:
 				status = False
@@ -355,8 +372,10 @@ def process_diseaseontology(infilename, inpath, outpath):
 	return status
 
 def process_mesh(infilename, inpath, outpath):
-	'''Processes MeSH into relationship format.
+	'''Processes MeSH RDF into simpler relationship format.
 	Takes input from process_kbs.'''
+	
+	#Not yet operational as I switch to RDF MeSH
 	
 	status = True
 	
@@ -364,30 +383,30 @@ def process_mesh(infilename, inpath, outpath):
 	newfilename = (str(infilename.split(".")[0])) + "-proc"
 	outfilepath = outpath / newfilename
 	print("Processing %s." % infilename)
-	try:
-		pbar = tqdm(unit=" lines")
-		with infilepath.open() as infile:
-			with outfilepath.open("w") as outfile:
-				entry = {}
-				for line in infile:
-					text = line.strip().split("=",1)
-					if text == ["*NEWRECORD"]: #start new entry for term
-						if len(entry.keys()) > 0: #If we have a previous entry, write it
-							outfile.write(str(entry) + "\n")
-						entry = {}
-					if text[0].strip() in ["RECTYPE","MH","AQ","ENTRY","MN","PA","UI"]:
-						if text[0].strip() in entry.keys(): #Have it already
-							entry[text[0].strip()].append(text[1].strip())
-						else:
-							entry[text[0].strip()] = [text[1].strip()]
-					pbar.update(1)
-				if len(entry.keys()) > 0: #Write the last entry
-					outfile.write(str(entry) + "\n")
+	# try:
+		# pbar = tqdm(unit=" lines")
+		# with infilepath.open() as infile:
+			# with outfilepath.open("w") as outfile:
+				# entry = {}
+				# for line in infile:
+					# text = line.strip().split("=",1)
+					# if text == ["*NEWRECORD"]: #start new entry for term
+						# if len(entry.keys()) > 0: #If we have a previous entry, write it
+							# outfile.write(str(entry) + "\n")
+						# entry = {}
+					# if text[0].strip() in ["RECTYPE","MH","AQ","ENTRY","MN","PA","UI"]:
+						# if text[0].strip() in entry.keys(): #Have it already
+							# entry[text[0].strip()].append(text[1].strip())
+						# else:
+							# entry[text[0].strip()] = [text[1].strip()]
+					# pbar.update(1)
+				# if len(entry.keys()) > 0: #Write the last entry
+					# outfile.write(str(entry) + "\n")
 					
-		pbar.close()
-	except IOError as e:
-		print("Encountered an error while processing %s: %s" % (infilename, e))
-		status = False
+		# pbar.close()
+	# except IOError as e:
+		# print("Encountered an error while processing %s: %s" % (infilename, e))
+		# status = False
 
 	return status
 	
@@ -653,29 +672,29 @@ def populate_graphdb(test_only):
 						pass
 			pbar.close()
 			
-		if kb == "m19":	#MeSH is not yet parsed hierarchically to produce is_a rels
-			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
-			with driver.session() as session:
-				i = 0
-				for entry in kb_rels:
-					try:
-						name1 = entry["MH"][0]
-						session.run(statement, {"name": name1, "kb_id": entry["UI"][0], "source": "MeSH 2019"})
-						if "PA" in entry.keys():
-							for item in entry["PA"]:
-								name2 = item
-								session.run("MATCH (a:Concept {name: $name1}), (b:Concept {name: $name2}) "
-										"MERGE (a)-[r:has_pharmacologic_action]->(b)", name1=name1, name2=name2)
-						i = i+1
-						pbar.update(1)
-						if i == max_node_count:
-							break
-					except KeyError: #Discard this entry
-						pass
-			pbar.close()
+		# if kb == "m19":	#MeSH is not yet parsed hierarchically to produce is_a rels
+			# pbar = tqdm(unit=" nodes added")
+			# statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
+			# with driver.session() as session:
+				# i = 0
+				# for entry in kb_rels:
+					# try:
+						# name1 = entry["MH"][0]
+						# session.run(statement, {"name": name1, "kb_id": entry["UI"][0], "source": "MeSH 2019"})
+						# if "PA" in entry.keys():
+							# for item in entry["PA"]:
+								# name2 = item
+								# session.run("MATCH (a:Concept {name: $name1}), (b:Concept {name: $name2}) "
+										# "MERGE (a)-[r:has_pharmacologic_action]->(b)", name1=name1, name2=name2)
+						# i = i+1
+						# pbar.update(1)
+						# if i == max_node_count:
+							# break
+					# except KeyError: #Discard this entry
+						# pass
+			# pbar.close()
 		
-		#The following is just a placeholder so I remember to load this KBs
+		#The following is just a placeholder so I remember to load this KB
 		
 		# if kb == "slx":
 			# pbar = tqdm(unit=" nodes added")
