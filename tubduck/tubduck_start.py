@@ -653,17 +653,29 @@ def populate_graphdb(test_only):
 						pass
 			pbar.close()
 			
-		if kb == "m19":	#MeSH is not yet parsed hierarchically to produce is_a rels
-			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
+		if kb == "m19":
+			'''Some nodes are added more than once if they have multiple
+			MN codes (this means they occupy multiple places in the
+			MeSH tree. Is_a relations are based on MN as well, 
+			as we don't always know the corresponding entry.'''
+			pbar = tqdm(unit=" entries added")
+			statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, mesh_tree_number:{mesh_tree_number}, source:{source}})"
 			with driver.session() as session:
 				i = 0
 				for entry in kb_rels:
-					try:
+					try:						
 						name1 = entry["MH"][0]
-						session.run(statement, {"name": name1, "kb_id": entry["UI"][0], "source": "MeSH 2019"})
+						kb_id1 = entry["UI"][0]
+						if "MN" in entry.keys():
+							for item in entry["MN"]: #Position in the MeSH tree - may have >1
+								session.run(statement, {"name": name1, "kb_id": kb_id1 , "mesh_tree_number": item ,"source": "MeSH 2019"})
+								mn_split = item.split(".")
+								if len(mn_split) >1: #If this isn't a parent term/code already
+									mn_parent = ".".join(mn_split[:-1])
+									session.run("MATCH (a:Concept {mesh_tree_number: $mn1}), (b:Concept {mesh_tree_number: $mn2}) "
+										"MERGE (a)-[r:is_a]->(b)", mn1=item, mn2=mn_parent)
 						if "PA" in entry.keys():
-							for item in entry["PA"]:
+							for item in entry["PA"]: #Pharmacologic Action - only present for subset
 								name2 = item
 								session.run("MATCH (a:Concept {name: $name1}), (b:Concept {name: $name2}) "
 										"MERGE (a)-[r:has_pharmacologic_action]->(b)", name1=name1, name2=name2)
