@@ -98,7 +98,6 @@ KB_PROC_PATH = Path('../working/kbs/processed')
 
 KB_NAMES = {"don": "doid.obo",		#The set of all knowledge bases,
 				"m19": "d2019.bin",  #with three-letter codes as keys.
-				"slx": "LEXICON",
 				"i10": "icd10cm_tabular_2019.xml"}
 
 ## Functions
@@ -300,11 +299,6 @@ def process_kbs(names, inpath, outpath):
 				pass
 			else:
 				status = False
-		if name == "slx":
-			if process_semanticlexicon(KB_NAMES[name], inpath, outpath):
-				pass
-			else:
-				status = False
 		if name == "i10":
 			if process_icd10cm(KB_NAMES[name], inpath, outpath):
 				pass
@@ -391,42 +385,6 @@ def process_mesh(infilename, inpath, outpath):
 
 	return status
 	
-def process_semanticlexicon(infilename, inpath, outpath):
-	'''Processes Semantic Lexicon into relationship format.
-	Takes input from process_kbs.'''
-	
-	status = True
-	
-	infilepath = inpath / infilename
-	newfilename = (str(infilename.split(".")[0])) + "-proc"
-	outfilepath = outpath / newfilename
-	print("Processing %s." % infilename)
-	try:
-		pbar = tqdm(unit=" lines")
-		with infilepath.open() as infile:
-			with outfilepath.open("w") as outfile:
-				entry = {}
-				for line in infile:
-					text = line.strip().split("=",1)
-					if text[0] == "{base": #start new entry for term
-						if len(entry.keys()) > 0: #If we have a previous entry, write it
-							outfile.write(str(entry) + "\n")
-						entry = {}
-						entry["base"] = text[1]
-					if text[0].strip() in ["entry","cat","variants"]:
-						if text[0] in entry.keys(): #Have it already
-							entry[text[0]].append(text[1].strip())
-						else:
-							entry[text[0]] = [text[1].strip()]
-					pbar.update(1)
-				if len(entry.keys()) > 0: #Write the last entry
-					outfile.write(str(entry) + "\n")
-		pbar.close()
-	except IOError as e:
-		print("Encountered an error while processing %s: %s" % (infilename, e))
-		status = False
-
-	return status
 	
 def process_icd10cm(infilename, inpath, outpath):
 	'''Processes 2019 release of ICD-10-CM into relationship format.
@@ -686,25 +644,6 @@ def populate_graphdb(test_only):
 					except KeyError: #Discard this entry
 						pass
 			pbar.close()
-		
-		#The following is just a placeholder so I remember to load this KBs
-		
-		# if kb == "slx":
-			# pbar = tqdm(unit=" nodes added")
-			# statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
-			# with driver.session() as session:
-				# for entry in kb_rels:
-					# try:
-						# name1 = entry["name"][0]
-						# session.run(statement, {"name": name1, "kb_id": entry["id"][0], "source": "Semantic Lexicon"})
-						# if "is_a" in entry.keys():
-							# name2 = ((entry["is_a"][0]).split("!")[1]).strip()
-							# session.run("MATCH (a:Concept {name: $name1}), (b:Concept {name: $name2}) "
-										# "MERGE (a)-[r:is_a]->(b)", name1=name1, name2=name2)
-						# pbar.update(1)
-					# except KeyError: #Discard this entry
-						# pass
-			# pbar.close()
 			
 		if kb == "i10":
 			pbar = tqdm(unit=" nodes added")
