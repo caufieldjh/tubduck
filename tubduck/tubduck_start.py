@@ -441,30 +441,28 @@ def create_graphdb():
 	start_neo4j()
 	#resource.setrlimit(resource.RLIMIT_NOFILE, (100000, 100000))
 	
-	#try:
-	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
-	statement = "CREATE (a:Concept {name:{name}, source:{source}})"
+	try:
+		driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+		statement = "CREATE (a:Concept {name:{name}, source:{source}})"
+		
+		with driver.session() as session:
+			tx = session.begin_transaction()
+			tx.run("MATCH (n) DETACH DELETE n") #Clear anything that already exists
+			
+			tx.run(statement, {"name": "protein", "source": "NA"})
+			tx.run(statement, {"name": "biomolecule", "source": "NA"})
+			tx.run("MATCH (a:Concept),(b:Concept) "
+					"WHERE a.name = 'protein' AND b.name = 'biomolecule' " 
+					"CREATE (a)-[r:is_a]->(b)")
+			tx.commit()
 	
-	with driver.session() as session:
-		tx = session.begin_transaction()
-		tx.run("MATCH (n) DETACH DELETE n") #Clear anything that already exists
+			print("Graph DB created: access at http://localhost:7474")
+			status = True
 		
-		tx.run(statement, {"name": "protein", "source": "NA"})
-		tx.run(statement, {"name": "biomolecule", "source": "NA"})
-		tx.run("MATCH (a:Concept),(b:Concept) "
-				"WHERE a.name = 'protein' AND b.name = 'biomolecule' " 
-				"CREATE (a)-[r:is_a]->(b)")
-		tx.commit()
-
-		print("Graph DB created: access at http://localhost:7474")
-		status = True
-		
-	#print("Encountered an error in graph DB setup: could not create relation.")
-		
-	# except Exception as e:
-		# print("**Encountered an error in Neo4j graph DB setup: %s" % e)
-		# print("**Please try accessing the server at http://localhost:7474/")
-		# print("**The default username is \"neo4j\" and the password is \"neo4j\".")
+	except neobolt.exceptions.AuthError as e:
+		print("**Encountered an error in Neo4j graph DB setup: %s" % e)
+		print("**Please try accessing the server at http://localhost:7474/")
+		print("**The default username is \"neo4j\" and the password is \"neo4j\".")
 	
 	return status
 	
