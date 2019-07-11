@@ -88,6 +88,7 @@ from pathlib import Path
 from tqdm import *
 
 from neo4j import GraphDatabase
+import neobolt.exceptions
 
 ## Constants
 TOTAL_KBS = 4 #The total count of knowledge bases we'll use
@@ -459,7 +460,7 @@ def create_graphdb():
 			print("Graph DB created: access at http://localhost:7474")
 			status = True
 		
-	except neobolt.exceptions.AuthError as e:
+	except (neobolt.exceptions.DatabaseError, neobolt.exceptions.AuthError) as e:
 		print("**Encountered an error in Neo4j graph DB setup: %s" % e)
 		print("**Please try accessing the server at http://localhost:7474/")
 		print("**The default username is \"neo4j\" and the password is \"neo4j\".")
