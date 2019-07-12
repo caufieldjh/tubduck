@@ -219,7 +219,7 @@ def setup(setup_to_do):
 	if "set up graph DB" in setup_to_do:
 		if not create_graphdb():
 			print("Encountered errors while setting up graph database.")
-			status = False
+			sys.exit() #Shouldn't continue in this case
 	
 	if "populate graph DB" in setup_to_do or "populate graph DB as test" in setup_to_do:
 		if "populate graph DB as test" in setup_to_do:

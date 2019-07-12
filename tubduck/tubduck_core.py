@@ -64,7 +64,10 @@ def main():
 		print("No setup required.")
 		
 	print("Getting input methods ready.")
-	#Run tubduck_input methods
+	doc_list = tinput.get_local_docs()
+	if len(doc_list) == 0:
+		print("Found no local input documents")
+	#Run tubduck_input methods - i.e., get input docs
 	
 	print("Processing...")
 	#Run tubduck_process methods
