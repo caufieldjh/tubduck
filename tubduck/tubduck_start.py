@@ -72,6 +72,7 @@ Make it accessible! As a prototype.
 '''
 
 import os
+import random
 import subprocess
 import sys
 import time
@@ -571,13 +572,27 @@ def populate_graphdb(test_only):
 		kb_rels = []
 		infilename = KB_NAMES[kb].split(".")[0] + "-proc"
 		print("Loading entries from %s..." % infilename)
-		pbar = tqdm(unit=" entries")
 		infilepath = KB_PROC_PATH / infilename
 		with infilepath.open('r') as infile:
+			
+			for count, line in enumerate(infile): #Get linecount first
+				pass
+			linecount = count + 1
+			print("File contains %s items." % linecount)
+			infile.seek(0)
+			
 			i = 0
+			if test_only:	#Jump ahead randomly if testing
+				try:
+					for _ in range(random.randint(1,linecount-100)):
+						next(infile)
+				except StopIteration as e:
+					break
+				pbar = tqdm(unit=" entries", total = max_node_count)
+			else:
+				pbar = tqdm(unit=" entries", total = linecount)
 			for line in infile: #Go line-by-line to be careful
 				kb_rels.append(ast.literal_eval(line.rstrip()))
-				max_node_count
 				i = i+1
 				pbar.update(1)
 				if i == max_node_count:
