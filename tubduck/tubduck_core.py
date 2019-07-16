@@ -58,15 +58,22 @@ def main():
 		print("Performing intial setup for: \n* %s" % ("\n* ".join(setup_to_do)))
 		if tstart.setup(setup_to_do):
 			print("All setup complete.")
+			if "empty_db" in tasks:
+				sys.exit("Database empty, exiting.")
 		else:
 			sys.exit("Setup did not complete properly.")
 	else:
 		print("No setup required.")
 		
-	print("Getting input methods ready.")
-	doc_list = tinput.get_local_docs()
-	if len(doc_list) == 0:
-		print("Found no local input documents")
+	print("Getting input ready.")
+	tinput.setup()
+	doc_file_index = tinput.get_local_docs()
+	for filetype in doc_file_index:
+		filecount = len(doc_file_index[filetype])
+		if filecount == 0:
+			print("Found no local %s input files." % filetype)
+		else:
+			print("Found %s local %s input files." % (filecount, filetype))
 	#Run tubduck_input methods - i.e., get input docs
 	
 	print("Processing...")
