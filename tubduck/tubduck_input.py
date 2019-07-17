@@ -16,6 +16,8 @@ import urllib
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+from Bio import Medline
+
 ## Constants
 INPUT_PATH = Path('../input')
 MEDLINE_PATH = Path('../input/medline')
@@ -115,17 +117,22 @@ def parse_docs(doc_file_index):
 	
 	parsed_docs = {}
 	
-	# Will be using BioPython to do parsing so I don't have to keep debugging it myself
-	
 	for filetype in doc_file_index:
 		if filetype == "medline": #Need to parse further
 			for doc_file_path in doc_file_index[filetype]:
-				filename = doc_file_path.stem
-				parsed_docs[filename] = {}
+				with open(doc_file_path) as handle:
+					record = Medline.read(handle)
+					pmid = record['PMID']
+					del record['PMID']
+					parsed_docs[pmid] = record
 		if filetype == "raw": #Not much to parse yet
 			for doc_file_path in doc_file_index[filetype]:
 				filename = doc_file_path.stem
 				parsed_docs[filename] = {}
+				parsed_docs[filename]['text'] = []
+				with open(doc_file_path) as raw_doc:
+					for line in raw_doc:
+						parsed_docs[filename]['text'].append(line)
 	
 	print(parsed_docs)
 	return parsed_docs
