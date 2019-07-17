@@ -32,7 +32,7 @@ def get_local_docs():
 	medline_file_list = [x for x in MEDLINE_PATH.iterdir()]
 	raw_file_list  = [x for x in RAW_PATH.iterdir()]
 	
-	doc_file_index["MEDLINE"] = medline_file_list
+	doc_file_index["medline"] = medline_file_list
 	doc_file_index["raw"] = raw_file_list
 	
 	return doc_file_index
@@ -104,9 +104,34 @@ def get_remote_docs(pmids):
 		print("Could not retrieve PubMed entries.")
 		
 	return outfilepath
+
+def parse_docs(doc_file_index):
+	'''Parses input documents. This varies based on their filetype,
+	which may be 'medline' or 'raw'. In the first case, each entry is
+	named based on its PMID and populated with MEDLINE format fields.
+	For raw documents, they will be identified based on their filenames.
+	Takes a dictionary as input, as produced by the get_local_docs()
+	method. Returns a dictionary with document IDs as keys.'''
+	
+	parsed_docs = {}
+	
+	# Will be using BioPython to do parsing so I don't have to keep debugging it myself
+	
+	for filetype in doc_file_index:
+		if filetype == "medline": #Need to parse further
+			for doc_file_path in doc_file_index[filetype]:
+				filename = doc_file_path.stem
+				parsed_docs[filename] = {}
+		if filetype == "raw": #Not much to parse yet
+			for doc_file_path in doc_file_index[filetype]:
+				filename = doc_file_path.stem
+				parsed_docs[filename] = {}
+	
+	print(parsed_docs)
+	return parsed_docs
 	
 def setup():
-	'''Create directories if they don't yet exist.'''
+	'''Create directories if they do not yet exist.'''
 	INPUT_PATH.mkdir(exist_ok=True)
 	MEDLINE_PATH.mkdir(exist_ok=True)
 	RAW_PATH.mkdir(exist_ok=True)

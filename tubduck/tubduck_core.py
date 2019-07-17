@@ -71,16 +71,18 @@ def main():
 		
 	print("Getting input ready.")
 	tinput.setup()
-	if len(pmids_to_get) > 0:
+	if args.get_pmid and len(pmids_to_get) > 0:
 		newpmidfile = tinput.get_remote_docs(pmids_to_get)
 	doc_file_index = tinput.get_local_docs()
+	parsed_docs = {}
 	for filetype in doc_file_index:
 		filecount = len(doc_file_index[filetype])
 		if filecount == 0:
 			print("Found no local %s input files." % filetype)
 		else:
 			print("Found %s local %s input files." % (filecount, filetype))
-	#Run tubduck_input methods - i.e., get input docs
+	parsed_docs = tinput.parse_docs(doc_file_index)
+	print("%s parsed document(s) to be processed." % len(parsed_docs))
 	
 	print("Processing...")
 	#Run tubduck_process methods
