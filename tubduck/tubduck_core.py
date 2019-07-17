@@ -34,6 +34,8 @@ parser.add_argument("--empty_db", help="empty the TUBDUCK Neo4j DB",
 					action="store_true")
 parser.add_argument("--test_load_db", help="load only a testing set (100 entries each) of each data source into the DB", 
 					action="store_true")
+parser.add_argument("--get_pmid", help="retrieve one or more documents in MEDLINE format from PubMed based on PMID", 
+					action="append")
 args = parser.parse_args()
 
 ## Classes
@@ -49,6 +51,8 @@ def main():
 		tasks.append("empty_db")
 	if args.test_load_db:
 		tasks.append("test_load_db")
+	if args.get_pmid:
+		pmids_to_get = args.get_pmid
 	
 	print("*** TUBDUCK ***")
 	
@@ -67,6 +71,8 @@ def main():
 		
 	print("Getting input ready.")
 	tinput.setup()
+	if len(pmids_to_get) > 0:
+		newpmidfile = tinput.get_remote_docs(pmids_to_get)
 	doc_file_index = tinput.get_local_docs()
 	for filetype in doc_file_index:
 		filecount = len(doc_file_index[filetype])
