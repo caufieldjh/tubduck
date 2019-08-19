@@ -208,8 +208,6 @@ def setup(setup_to_do):
 			need_kb_proc_files.append("don")
 		if "d2019-proc" not in kb_proc_files:
 			need_kb_proc_files.append("m19")
-		if "LEXICON-proc" not in kb_proc_files:
-			need_kb_proc_files.append("slx")
 		if "icd10cm_tabular_2019-proc" not in kb_proc_files:
 			need_kb_proc_files.append("i10")
 		kb_proc_codes = need_kb_proc_files
@@ -249,7 +247,6 @@ def get_kbs(names, path):
 	
 	data_locations = {"don": ("http://ontologies.berkeleybop.org/","doid.obo"),
 					"m19": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2019.bin"), 
-					"slx": ("https://lsg3.nlm.nih.gov/LexSysGroup/Projects/lexicon/2019/release/LEX/", "LEXICON"),
 					"i10": ("ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2019/", "icd10cm_tabular_2019.xml")}
 	
 	filenames = []
@@ -386,7 +383,6 @@ def process_mesh(infilename, inpath, outpath):
 		status = False
 
 	return status
-	
 	
 def process_icd10cm(infilename, inpath, outpath):
 	'''Processes 2019 release of ICD-10-CM into relationship format.
