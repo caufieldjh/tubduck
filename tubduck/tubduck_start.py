@@ -204,12 +204,11 @@ def setup(setup_to_do):
 	if "process some knowledge bases" in setup_to_do:
 		kb_proc_files = [x.stem for x in KB_PROC_PATH.iterdir()]
 		need_kb_proc_files = []
-		if "doid-proc" not in kb_proc_files:
-			need_kb_proc_files.append("don")
-		if "d2019-proc" not in kb_proc_files:
-			need_kb_proc_files.append("m19")
-		if "icd10cm_tabular_2019-proc" not in kb_proc_files:
-			need_kb_proc_files.append("i10")
+		for kb in KB_NAMES:
+			filename = KB_NAMES[kb]
+			newfilename = (str(filename.split(".")[0])) + "-proc"
+			if newfilename not in kb_proc_files:
+				need_kb_proc_files.append(kb)
 		kb_proc_codes = need_kb_proc_files
 		if not process_kbs(kb_proc_codes,KB_PATH,KB_PROC_PATH):
 			print("Encountered errors while processing knowledge base files.")
