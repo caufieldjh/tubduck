@@ -100,7 +100,9 @@ KB_PROC_PATH = Path('../working/kbs/processed')
 
 KB_NAMES = {"don": "doid.obo",		#The set of all knowledge bases,
 				"m19": "d2019.bin",  #with three-letter codes as keys.
-				"i10": "icd10cm_tabular_2019.xml"}
+				"i10": "icd10cm_tabular_2019.xml",
+				"i11": "simpletabulation.xlsx"
+					}
 
 ## Functions
 def setup_checks(tasks):
@@ -246,7 +248,9 @@ def get_kbs(names, path):
 	
 	data_locations = {"don": ("http://ontologies.berkeleybop.org/","doid.obo"),
 					"m19": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2019.bin"), 
-					"i10": ("ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2019/", "icd10cm_tabular_2019.xml")}
+					"i10": ("ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2019/", "icd10cm_tabular_2019.xml"),
+					"i11": ("https://icd.who.int/browse11/Downloads/", "Download?fileName=simpletabulation.zip")
+					}
 	
 	filenames = []
 	status = True #Becomes False upon encountering error
@@ -254,7 +258,10 @@ def get_kbs(names, path):
 	for name in names:
 		baseURL, filename = data_locations[name]
 		filepath = baseURL + filename
-		outfilepath = path / filename
+		if name in ["i11"]:	#ICD-11 has a specific access procedure for now
+			outfilepath = path / (filename.split("="))[1]
+		else:
+			outfilepath = path / filename
 		
 		print("Downloading from %s" % filepath)
 		try:
@@ -299,6 +306,11 @@ def process_kbs(names, inpath, outpath):
 				status = False
 		if name == "i10":
 			if process_icd10cm(KB_NAMES[name], inpath, outpath):
+				pass
+			else:
+				status = False
+		if name == "i11":
+			if process_icd11mms(KB_NAMES[name], inpath, outpath):
 				pass
 			else:
 				status = False
@@ -390,6 +402,50 @@ def process_icd10cm(infilename, inpath, outpath):
 	Uses the hierarchy to form is_a relations.
 	It's a bit messy as that involves lookback.
 	Doesn't assign chapter membership yet.'''
+	
+	status = True
+	
+	infilepath = inpath / infilename
+	newfilename = (str(infilename.split(".")[0])) + "-proc"
+	outfilepath = outpath / newfilename
+	print("Processing %s." % infilename)
+	try:
+		pbar = tqdm(unit=" entries")
+		with infilepath.open() as infile:
+			contents = infile.read()
+			soup = BeautifulSoup(contents,'xml')
+			diags = soup.find_all('diag')
+			with outfilepath.open("w") as outfile: 
+				for diag in diags:
+					cont = diag.contents
+					name = cont[1].contents
+					desc = cont[3].contents
+					
+					parent_diag = diag.parent
+					parent_cont = parent_diag.contents
+					parent_name = parent_cont[1].contents
+					
+					entry = {'id':name, 'name':desc, 'is_a':parent_name}
+					outfile.write(str(entry) + "\n")
+					pbar.update(1)
+		pbar.close()
+	except IOError as e:
+		print("Encountered an error while processing %s: %s" % (infilename, e))
+		status = False
+
+	return status
+	
+def process_icd11mms(infilename, inpath, outpath):
+	'''Processes 2019 release of ICD-11-MMS into relationship format.
+	Takes input from process_kbs.
+	The input file is a ZIP-compressed XLSX file.
+	Uses the hierarchy to form is_a relations.
+	
+	Next steps - 
+	1. Unzip (helper)
+	2. Convert from XLSX to TSV (helper)
+	3. Process (see other script)
+	'''
 	
 	status = True
 	
