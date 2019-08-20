@@ -91,6 +91,8 @@ from tqdm import *
 from neo4j import GraphDatabase
 import neobolt.exceptions
 
+import tubduck_helpers as thelp
+
 ## Constants
 TOTAL_KBS = 4 #The total count of knowledge bases we'll use
 				#To be specified in more detail later
@@ -98,11 +100,17 @@ WORKING_PATH = Path('../working')
 KB_PATH = Path('../working/kbs')
 KB_PROC_PATH = Path('../working/kbs/processed')
 
-KB_NAMES = {"don": "doid.obo",		#The set of all knowledge bases,
-				"m19": "d2019.bin",  #with three-letter codes as keys.
+KB_NAMES = {"don": "doid.obo",		
+				"m19": "d2019.bin",  
 				"i10": "icd10cm_tabular_2019.xml",
-				"i11": "simpletabulation.xlsx"
+				"i11": "simpletabulation.zip"
 					}
+'''
+All knowledge bases to be (potentially) loaded,
+with three-letter codes as keys,
+and the original, in some cases compressed, files
+as values.
+'''
 
 ## Functions
 def setup_checks(tasks):
@@ -439,40 +447,98 @@ def process_icd11mms(infilename, inpath, outpath):
 	'''Processes 2019 release of ICD-11-MMS into relationship format.
 	Takes input from process_kbs.
 	The input file is a ZIP-compressed XLSX file.
+	Converts to triple form.
 	Uses the hierarchy to form is_a relations.
-	
-	Next steps - 
-	1. Unzip (helper)
-	2. Convert from XLSX to TSV (helper)
-	3. Process (see other script)
 	'''
 	
 	status = True
 	
 	infilepath = inpath / infilename
+	midfilename = (str(infilename.split(".")[0])) + ".xlsx"
+	midfilepath = inpath / midfilename
+	tabfilename = (str(infilename.split(".")[0])) + ".tsv"
+	tabfilepath = inpath / tabfilename
 	newfilename = (str(infilename.split(".")[0])) + "-proc"
 	outfilepath = outpath / newfilename
-	print("Processing %s." % infilename)
+	
+	print("Decompressing %s." % infilename)
+	thelp.decompress(infilepath, inpath)
+	
+	print("Processing %s." % midfilename)
+	
+	thelp.convert_xlsx_to_tsv(midfilepath, tabfilepath)
+	
 	try:
-		pbar = tqdm(unit=" entries")
-		with infilepath.open() as infile:
-			contents = infile.read()
-			soup = BeautifulSoup(contents,'xml')
-			diags = soup.find_all('diag')
-			with outfilepath.open("w") as outfile: 
-				for diag in diags:
-					cont = diag.contents
-					name = cont[1].contents
-					desc = cont[3].contents
+		with tabfilepath.open() as infile:
+			pbar = tqdm(unit=" entries")
+			infile.readline() #Skip the header
+		
+			all_nodes = {}
+		
+			node_id = -1
+			previous_level = 0
+			most_recent_id_at_level = {} #levels are keys, node_id is value
+			
+			for line in infile:
+				node_id = node_id +1
+				
+				splitline = line.split("\t")
+				code = splitline[2]
+				title = splitline[4]
+				
+				cleantitle = ""			#The title indicates the level
+				level = 0				#But we just want the text in the title
+				counting = True
+				
+				for char in title:		#There are other ways to do this, yes
+					if char == "-" and counting:
+						level = level +1
+					if char not in ["-"," "]:
+						counting = False
+					if not counting:
+						cleantitle = cleantitle + char
+						
+				cleantitle = cleantitle.lstrip()
+				code_and_title = [code,cleantitle]
+				
+				#Now let's figure out what the parent is.
+				#Keep track of the node_id of the previous level was
+				if level == 0:
+					parent = "None"
+				else:
+					parent = most_recent_id_at_level[level - 1]
+				
+				all_nodes[node_id] = [code_and_title, parent] #parent is a node_id
+				
+				previous_level = level
+				
+				most_recent_id_at_level[level] = node_id
+				
+				pbar.update(1)
+			
+		#Now write
+		with outfilepath.open("w") as outfile:
+			for node in all_nodes:
+				parent_id = all_nodes[node][1]
+				codeA = all_nodes[node][0][0]
+				titleA = all_nodes[node][0][1]
 					
-					parent_diag = diag.parent
-					parent_cont = parent_diag.contents
-					parent_name = parent_cont[1].contents
+				if parent_id == "None":
+					pass
+				else:
+					codeB = all_nodes[parent_id][0][0]
+					titleB = all_nodes[parent_id][0][1]
 					
-					entry = {'id':name, 'name':desc, 'is_a':parent_name}
-					outfile.write(str(entry) + "\n")
-					pbar.update(1)
+					if codeA == "":
+						codeA = "NA"
+					if codeB == "":
+						codeB = "NA"
+					
+					out_string = "%s\t%s\tis_a\t%s\t%s\n" % (codeA, titleA, codeB, titleB)
+					outfile.write(out_string)
+
 		pbar.close()
+		
 	except IOError as e:
 		print("Encountered an error while processing %s: %s" % (infilename, e))
 		status = False

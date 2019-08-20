@@ -3,3 +3,4 @@ bs4
 neo4j
 tqdm
 flair
+xlrd
