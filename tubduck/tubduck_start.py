@@ -408,8 +408,8 @@ def process_icd10cm(infilename, inpath, outpath):
 	Takes input from process_kbs.
 	The input file is the "tabular" version in XML format.
 	Uses the hierarchy to form is_a relations.
-	It's a bit messy as that involves lookback.
-	Doesn't assign chapter membership yet.'''
+	ICD-10 codes don't come with unique identifiers so we generate one,
+	prefixed with the KB's code.'''
 	
 	status = True
 	
@@ -423,19 +423,55 @@ def process_icd10cm(infilename, inpath, outpath):
 			contents = infile.read()
 			soup = BeautifulSoup(contents,'xml')
 			diags = soup.find_all('diag')
-			with outfilepath.open("w") as outfile: 
-				for diag in diags:
-					cont = diag.contents
-					name = cont[1].contents
-					desc = cont[3].contents
+			
+			uri_inc = 0
+			all_nodes = {}
+			
+			for diag in diags:
+				
+				uri = "i10-" + str(uri_inc)
+				uri_inc = uri_inc+1
+				
+				cont = diag.contents
+				code = (cont[1].contents)[0]
+				title = (cont[3].contents)[0]
+				
+				parent_diag = diag.parent
+				parent_cont = parent_diag.contents
+				parent_code = (parent_cont[1].contents)[0]
+				
+				#The parent may be a section heading rather than a code,
+				#but we'd like to capture those, too, so we do that here
+				#It is its own parent for convenience
+				if len(parent_code) > 7: #Codes are < 7 chars in ICD-10
+					uri = "i10-" + str(uri_inc)
+					uri_inc = uri_inc+1
 					
-					parent_diag = diag.parent
-					parent_cont = parent_diag.contents
-					parent_name = parent_cont[1].contents
+					all_nodes[parent_code] = {"uri":uri,"code":"NA","title":title,
+										"parent":parent_code} #parent is a code
 					
-					entry = {'id':name, 'name':desc, 'is_a':parent_name}
+				
+				all_nodes[code] = {"uri":uri,"code":code,"title":title,
+										"parent":parent_code} #parent is a code
+				
+				pbar.update(1)
+		
+		#Now write
+		with outfilepath.open("w") as outfile:
+			for node in all_nodes:
+				parent_id = all_nodes[node]["parent"]
+				uriA = all_nodes[node]["uri"]
+				codeA = all_nodes[node]["code"]
+				titleA = all_nodes[node]["title"]
+					
+				if parent_id == "None":
+					pass
+				else:
+					uriB = all_nodes[parent_id]["uri"]
+					
+					entry = {'id':uriA, 'name':titleA, 'code':codeA, 'is_a':uriB}
 					outfile.write(str(entry) + "\n")
-					pbar.update(1)
+				
 		pbar.close()
 	except IOError as e:
 		print("Encountered an error while processing %s: %s" % (infilename, e))
@@ -489,6 +525,8 @@ def process_icd11mms(infilename, inpath, outpath):
 					cleanuri = (splitline[1].split("/"))[-2] + "/" + uri
 				else:
 					cleanuri = uri
+					
+				cleanuri = "i11-" + cleanuri
 				
 				chapterno = splitline[9]
 				code = splitline[2]
