@@ -475,14 +475,22 @@ def process_icd11mms(infilename, inpath, outpath):
 		
 			all_nodes = {}
 		
-			node_id = -1
+			node_count = -1
 			previous_level = 0
-			most_recent_id_at_level = {} #levels are keys, node_id is value
+			most_recent_id_at_level = {} #levels are keys, node_count is value
 			
 			for line in infile:
-				node_id = node_id +1
+				node_count = node_count +1
 				
 				splitline = line.split("\t")
+				
+				uri = (splitline[1].split("/"))[-1]
+				if uri in ["other","unspecified"]:
+					cleanuri = (splitline[1].split("/"))[-2] + "/" + uri
+				else:
+					cleanuri = uri
+				
+				chapterno = splitline[9]
 				code = splitline[2]
 				title = splitline[4]
 				
@@ -502,39 +510,46 @@ def process_icd11mms(infilename, inpath, outpath):
 				code_and_title = [code,cleantitle]
 				
 				#Now let's figure out what the parent is.
-				#Keep track of the node_id of the previous level was
+				#Keep track of the node_count of the previous level was
 				if level == 0:
 					parent = "None"
 				else:
 					parent = most_recent_id_at_level[level - 1]
 				
-				all_nodes[node_id] = [code_and_title, parent] #parent is a node_id
+				all_nodes[node_count] = {"uri":cleanuri,"code":code,"title":cleantitle,
+								"chapter":chapterno,"parent":parent} #parent is a node_count
 				
 				previous_level = level
 				
-				most_recent_id_at_level[level] = node_id
+				most_recent_id_at_level[level] = node_count
 				
 				pbar.update(1)
 			
 		#Now write
 		with outfilepath.open("w") as outfile:
 			for node in all_nodes:
-				parent_id = all_nodes[node][1]
-				codeA = all_nodes[node][0][0]
-				titleA = all_nodes[node][0][1]
+				parent_id = all_nodes[node]["parent"]
+				uriA = all_nodes[node]["uri"]
+				codeA = all_nodes[node]["code"]
+				titleA = all_nodes[node]["title"]
+				chapterA = all_nodes[node]["chapter"]
 					
 				if parent_id == "None":
 					pass
 				else:
-					codeB = all_nodes[parent_id][0][0]
-					titleB = all_nodes[parent_id][0][1]
+					uriB = all_nodes[parent_id]["uri"]
+					codeB = all_nodes[parent_id]["code"]
+					titleB = all_nodes[parent_id]["title"]
+					chapterB = all_nodes[parent_id]["chapter"]
 					
 					if codeA == "":
 						codeA = "NA"
 					if codeB == "":
 						codeB = "NA"
 					
-					out_string = "%s\t%s\tis_a\t%s\t%s\n" % (codeA, titleA, codeB, titleB)
+					out_string = "%s\t%s\t%s\t%s\tis_a\t%s\t%s\t%s\t%s\t\n" % (uriA, codeA, 
+																	titleA, chapterA, uriB,
+																	codeB, titleB, chapterB)
 					outfile.write(out_string)
 
 		pbar.close()
