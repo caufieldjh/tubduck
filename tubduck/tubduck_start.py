@@ -832,16 +832,18 @@ def populate_graphdb(test_only):
 			
 		if kb == "i10":
 			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
+			statement = "MERGE (a:Disease {kb_id:{kb_id}, name:{name}, code:{code}, source:{source}})"
 			with driver.session() as session:
 				i = 0
 				for entry in kb_rels:
 					try:
-						name1 = entry["name"][0]
-						kb_id1 = entry["id"][0]
-						session.run(statement, {"name": name1, "kb_id": kb_id1, "source": "ICD-10-CM 2019"})
+						kb_id1 = entry["id"]
+						name1 = entry["name"]
+						code1 = entry["code"]
+						source1 = "ICD-10-CM 2019"
+						session.run(statement, {"kb_id": kb_id1, "name": name1, "code": code1, "source": source1})
 						if "is_a" in entry.keys(): #All codes have one parent at most
-							kb_id2 = entry["is_a"][0]
+							kb_id2 = entry["is_a"]
 							session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
 										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
 						i = i+1
@@ -854,16 +856,18 @@ def populate_graphdb(test_only):
 		
 		if kb == "i11":
 			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
+			statement = "MERGE (a:Disease {kb_id:{kb_id}, name:{name}, code:{code}, source:{source}})"
 			with driver.session() as session:
 				i = 0
 				for entry in kb_rels:
 					try:
-						name1 = entry["name"][0]
-						kb_id1 = entry["id"][0]
-						session.run(statement, {"name": name1, "kb_id": kb_id1, "source": "ICD-10-CM 2019"})
+						kb_id1 = entry["id"]
+						name1 = entry["name"]
+						code1 = entry["code"]
+						source1 = "ICD-11-MMS 2019"
+						session.run(statement, {"kb_id": kb_id1, "name": name1, "code": code1, "source": source1})
 						if "is_a" in entry.keys(): #All codes have one parent at most
-							kb_id2 = entry["is_a"][0]
+							kb_id2 = entry["is_a"]
 							session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
 										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
 						i = i+1
