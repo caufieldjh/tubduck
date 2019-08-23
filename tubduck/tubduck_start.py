@@ -547,10 +547,11 @@ def process_icd11mms(infilename, inpath, outpath):
 					if codeB == "":
 						codeB = "NA"
 					
-					out_string = "%s\t%s\t%s\t%s\tis_a\t%s\t%s\t%s\t%s\t\n" % (uriA, codeA, 
-																	titleA, chapterA, uriB,
-																	codeB, titleB, chapterB)
-					outfile.write(out_string)
+					#out_string = "%s\t%s\t%s\t%s\tis_a\t%s\t%s\t%s\t%s\t\n" % (uriA, codeA, 
+					#												titleA, chapterA, uriB,
+					#												codeB, titleB, chapterB)
+					entry = {'id':uriA, 'name':titleA, 'code':codeA, 'is_a':uriB}
+					outfile.write(str(entry) + "\n")
 
 		pbar.close()
 		
@@ -792,6 +793,28 @@ def populate_graphdb(test_only):
 			pbar.close()
 			
 		if kb == "i10":
+			pbar = tqdm(unit=" nodes added")
+			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
+			with driver.session() as session:
+				i = 0
+				for entry in kb_rels:
+					try:
+						name1 = entry["name"][0]
+						kb_id1 = entry["id"][0]
+						session.run(statement, {"name": name1, "kb_id": kb_id1, "source": "ICD-10-CM 2019"})
+						if "is_a" in entry.keys(): #All codes have one parent at most
+							kb_id2 = entry["is_a"][0]
+							session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
+										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+						i = i+1
+						pbar.update(1)
+						if i == max_node_count:
+							break
+					except KeyError: #Discard this entry
+						pass
+			pbar.close()
+		
+		if kb == "i11":
 			pbar = tqdm(unit=" nodes added")
 			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
 			with driver.session() as session:
