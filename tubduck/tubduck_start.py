@@ -774,20 +774,21 @@ def populate_graphdb(test_only):
 		# Now we do KB-specific parsing.
 		if kb == "don":
 			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:Disease {name:{name}, kb_id:{kb_id}, source:{source}})"
+			statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, source:{source}})"
 			with driver.session() as session:
 				i = 0
 				for entry in kb_rels:
 					try:
 						name1 = entry["name"][0]
 						kb_id1 = entry["id"][0]
-						session.run(statement, {"name": name1, "kb_id": kb_id1, "source": "Disease Ontology"})
+						source1 = "Disease Ontology"
+						session.run(statement, {"name": name1, "kb_id": kb_id1, "source": source1})
 						if "is_a" in entry.keys():
 							targets = entry["is_a"] #May be multiple relationships
 							for target in targets:
 								kb_id2 = (target.split("!")[0]).strip()
-								session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
-										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+								session.run("MATCH (a:Concept {kb_id: $kb_id1}), (b:Concept {kb_id: $kb_id2}) "
+										"MERGE (a)-[r:is_a {source: $source }]->(b)", kb_id1=kb_id1, kb_id2=kb_id2, source=source1)
 						i = i+1
 						pbar.update(1)
 						if i == max_node_count:
@@ -802,26 +803,27 @@ def populate_graphdb(test_only):
 			MeSH tree. Is_a relations are based on MN as well, 
 			as we don't always know the corresponding entry.'''
 			pbar = tqdm(unit=" entries added")
-			statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, mesh_tree_number:{mesh_tree_number}, source:{source}})"
+			statement = "MERGE (a:Concept {name:{name}, kb_id:{kb_id}, code:{code}, source:{source}})"
 			with driver.session() as session:
 				i = 0
 				for entry in kb_rels:
 					try:						
 						name1 = entry["MH"][0]
 						kb_id1 = entry["UI"][0]
+						source1 = "MeSH 2019"
 						if "MN" in entry.keys():
 							for item in entry["MN"]: #Position in the MeSH tree - may have >1
-								session.run(statement, {"name": name1, "kb_id": kb_id1 , "mesh_tree_number": item ,"source": "MeSH 2019"})
+								session.run(statement, {"name": name1, "kb_id": kb_id1 , "code": item ,"source": source1})
 								mn_split = item.split(".")
 								if len(mn_split) >1: #If this isn't a parent term/code already
 									mn_parent = ".".join(mn_split[:-1])
-									session.run("MATCH (a:Concept {mesh_tree_number: $mn1}), (b:Concept {mesh_tree_number: $mn2}) "
-										"MERGE (a)-[r:is_a]->(b)", mn1=item, mn2=mn_parent)
+									session.run("MATCH (a:Concept {code: $mn1}), (b:Concept {code: $mn2}) "
+										"MERGE (a)-[r:is_a {source: $source }]->(b)", mn1=item, mn2=mn_parent, source=source1)
 						if "PA" in entry.keys():
 							for item in entry["PA"]: #Pharmacologic Action - only present for subset
 								name2 = item
 								session.run("MATCH (a:Concept {name: $name1}), (b:Concept {name: $name2}) "
-										"MERGE (a)-[r:has_pharmacologic_action]->(b)", name1=name1, name2=name2)
+										"MERGE (a)-[r:has_pharmacologic_action {source: $source }]->(b)", name1=name1, name2=name2, source=source1)
 						i = i+1
 						pbar.update(1)
 						if i == max_node_count:
@@ -832,7 +834,7 @@ def populate_graphdb(test_only):
 			
 		if kb == "i10":
 			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:Disease {kb_id:{kb_id}, name:{name}, code:{code}, source:{source}})"
+			statement = "MERGE (a:Concept {kb_id:{kb_id}, name:{name}, code:{code}, source:{source}})"
 			with driver.session() as session:
 				i = 0
 				for entry in kb_rels:
@@ -844,8 +846,8 @@ def populate_graphdb(test_only):
 						session.run(statement, {"kb_id": kb_id1, "name": name1, "code": code1, "source": source1})
 						if "is_a" in entry.keys(): #All codes have one parent at most
 							kb_id2 = entry["is_a"]
-							session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
-										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+							session.run("MATCH (a:Concept {kb_id: $kb_id1}), (b:Concept {kb_id: $kb_id2}) "
+										"MERGE (a)-[r:is_a {source: $source }]->(b)", kb_id1=kb_id1, kb_id2=kb_id2, source=source1)
 						i = i+1
 						pbar.update(1)
 						if i == max_node_count:
@@ -856,7 +858,7 @@ def populate_graphdb(test_only):
 		
 		if kb == "i11":
 			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:Disease {kb_id:{kb_id}, name:{name}, code:{code}, source:{source}})"
+			statement = "MERGE (a:Concept {kb_id:{kb_id}, name:{name}, code:{code}, source:{source}})"
 			with driver.session() as session:
 				i = 0
 				for entry in kb_rels:
@@ -868,8 +870,8 @@ def populate_graphdb(test_only):
 						session.run(statement, {"kb_id": kb_id1, "name": name1, "code": code1, "source": source1})
 						if "is_a" in entry.keys(): #All codes have one parent at most
 							kb_id2 = entry["is_a"]
-							session.run("MATCH (a:Disease {kb_id: $kb_id1}), (b:Disease {kb_id: $kb_id2}) "
-										"MERGE (a)-[r:is_a]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+							session.run("MATCH (a:Concept {kb_id: $kb_id1}), (b:Concept {kb_id: $kb_id2}) "
+										"MERGE (a)-[r:is_a {source: $source }]->(b)", kb_id1=kb_id1, kb_id2=kb_id2, source=source1)
 						i = i+1
 						pbar.update(1)
 						if i == max_node_count:
