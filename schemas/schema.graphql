@@ -1,0 +1,12 @@
+type Concept {
+	kb_id: String!
+	name: String
+	code: String
+	source: String
+	is_a: [Concept]
+	has_pharmacologic_action: [Concept]
+}
+
+type Query {
+	concept(kb_id: String!): Concept
+}
