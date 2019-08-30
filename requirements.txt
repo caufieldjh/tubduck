@@ -1,3 +1,4 @@
+ariadne
 biopython
 bs4
 neo4j
