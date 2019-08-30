@@ -3,7 +3,9 @@
 '''
 Functions for TUBDUCK to construct all necessary databases and learning
 modules. This includes accumulating training data and training the 
-modules themselves. 
+modules themselves.
+Does not start the server as that must continue running to be
+operational.
 '''
 
 import os
@@ -29,6 +31,8 @@ from tqdm import *
 from neo4j import GraphDatabase
 import neobolt.exceptions
 
+from flask import Flask
+
 import tubduck_helpers as thelp
 
 ## Constants
@@ -38,6 +42,8 @@ WORKING_PATH = Path('../working')
 KB_PATH = Path('../working/kbs')
 KB_PROC_PATH = Path('../working/kbs/processed')
 SCHEMA_PATH = Path('../schemas')
+
+SERVER_LOC = 'http://127.0.0.1:5000/'
 
 KB_NAMES = {"don": "doid.obo",		
 				"m19": "d2019.bin",  
@@ -112,6 +118,8 @@ def setup_checks(tasks):
 			setup_list.append("empty graph DB")
 			
 	setup_list.append("check data and query schema")
+	
+	setup_list.append("check Flask server")
 
 	return setup_list
 	
@@ -190,6 +198,11 @@ def setup(setup_to_do):
 	if "empty graph DB" in setup_to_do:
 		if not empty_graphdb():
 			print("Encountered errors while emptying graph database.")
+			status = False
+			
+	if "check Flask server" in setup_to_do:
+		if not check_server():
+			print("Encountered errors while checking on app server - it may not be running.")
 			status = False
 			
 	return status
@@ -658,6 +671,20 @@ def start_neo4j():
 		status = True
 	else:
 		status = True
+		
+	return status
+	
+def check_server():
+	'''Check on status of the Flask server.'''
+	
+	status = False
+	
+	try:
+		urllib.request.urlopen(SERVER_LOC)
+		status = True
+	except urllib.error.URLError as e:
+		print("Error when checking on server: " + str(e))
+		status = False
 		
 	return status
 	
