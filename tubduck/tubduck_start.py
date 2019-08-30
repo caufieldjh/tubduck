@@ -14,6 +14,7 @@ import time
 #import resource #for raising open file limits as per Neo4j
 
 import ariadne
+import graphql
 
 import ast
 
@@ -36,6 +37,7 @@ TOTAL_KBS = 4 #The total count of knowledge bases we'll use
 WORKING_PATH = Path('../working')
 KB_PATH = Path('../working/kbs')
 KB_PROC_PATH = Path('../working/kbs/processed')
+SCHEMA_PATH = Path('../schemas')
 
 KB_NAMES = {"don": "doid.obo",		
 				"m19": "d2019.bin",  
@@ -108,6 +110,8 @@ def setup_checks(tasks):
 				setup_list.append("populate graph DB")
 		if "empty_db" in tasks:
 			setup_list.append("empty graph DB")
+			
+	setup_list.append("check data and query schema")
 
 	return setup_list
 	
@@ -121,6 +125,11 @@ def setup(setup_to_do):
 	kb_codes = KB_NAMES.keys() #Knowledge bases each get code
 	kb_proc_codes = kb_codes
 		
+	if "check data and query schema" in setup_to_do:
+		if not check_schema():
+			print("Encountered errors while loading schema.")
+			status = False
+	
 	if "working directory" in setup_to_do:
 		WORKING_PATH.mkdir(parents=True)
 		setup_all = True
@@ -649,6 +658,23 @@ def start_neo4j():
 		status = True
 	else:
 		status = True
+		
+	return status
+	
+def check_schema():
+	'''Verifies the GraphQL-defined data and query type schema
+	are accessible and formatted correctly.'''
+	
+	status = False
+	
+	try:
+		schemafilepath = SCHEMA_PATH / "schema.graphql"
+		schema = ariadne.load_schema_from_path(schemafilepath)
+		status = True
+		print("Schema are OK.")
+	except (IOError, graphql.error.syntax_error.GraphQLSyntaxError, ariadne.exceptions.GraphQLFileSyntaxError) as e:
+		print("Encountered an error while checking on schema: " + str(e))
+		status = False
 		
 	return status
 	
