@@ -1,4 +1,14 @@
 #!/usr/bin/python
+#tubduck_settings.py
+
+'''
+This is the TUBDUCK settings file.
+It sets default environment variables, primarily for Neo4j.
+Because these are environment variables, they may vary by environment.
+It's all right there in the name. Fun, right?
+'''
+__author__= "Harry Caufield"
+__email__ = "jcaufield@mednet.ucla.edu"
 
 from environs import Env
 

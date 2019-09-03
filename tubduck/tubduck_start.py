@@ -4,6 +4,8 @@
 Functions for TUBDUCK to construct all necessary databases and learning
 modules. This includes accumulating training data and training the 
 modules themselves.
+Does not start Neo4j - it must already be running (this is to allow for
+a variety of use cases, including local or remote graph DBs).
 Does not start the server as that must continue running to be
 operational.
 '''
@@ -34,6 +36,7 @@ import neobolt.exceptions
 from flask import Flask
 
 import tubduck_helpers as thelp
+import tubduck_settings as tsettings
 
 ## Constants
 TOTAL_KBS = 4 #The total count of knowledge bases we'll use
@@ -56,6 +59,12 @@ with three-letter codes as keys,
 and the original, in some cases compressed, files
 as values.
 '''
+
+NEO4J_HOST=tsettings.NEO4J_HOST
+NEO4J_PORT=tsettings.NEO4J_PORT
+NEO4J_URI = "bolt://" + NEO4J_HOST + ":" + str(NEO4J_PORT)
+NEO4J_USER=tsettings.NEO4J_USER
+NEO4J_PASSWORD=tsettings.NEO4J_PASSWORD
 
 ## Functions
 def setup_checks(tasks):
@@ -98,12 +107,8 @@ def setup_checks(tasks):
 	if not graphdb_exists():
 		if "empty_db" in tasks:
 			sys.exit("Empty database requested but DB does not exist. Exiting...")
-		setup_list.append("set up graph DB")
-		if "test_load_db" in tasks:
-			setup_list.append("populate graph DB as test")
 		else:
-			setup_list.append("populate graph DB")
-		graph_exists = False
+			sys.exit("Can't find Neo4j DB or Neo4j not running. Exiting...")
 	
 	if graph_exists:
 		gdb_vals = graphdb_stats()
@@ -177,11 +182,6 @@ def setup(setup_to_do):
 		if not process_kbs(kb_proc_codes,KB_PATH,KB_PROC_PATH):
 			print("Encountered errors while processing knowledge base files.")
 			status = False
-		
-	if "set up graph DB" in setup_to_do:
-		if not create_graphdb():
-			print("Encountered errors while setting up graph database.")
-			sys.exit() #Shouldn't continue in this case
 	
 	if "populate graph DB" in setup_to_do or "populate graph DB as test" in setup_to_do:
 		if "populate graph DB as test" in setup_to_do:
@@ -599,26 +599,26 @@ def create_graphdb():
 	return status
 	
 def graphdb_exists():
-	'''Checks to see if the Neo4j database exists.
-	It may be available for the local user or at the system level.
-	Returns True if it exists, even if it's empty,
+	'''Checks to see if the Neo4j database is available.
+	Returns True if it appears to exist, even if it's empty,
 	because we don't do anything with the DB here.'''
 	
 	status = False
 	
-	ndb_home_path = Path.home() / "neo4j/data/databases"
-	ndb_sys_path = Path("/var/lib/neo4j/data/databases")
-	
-	ndb_paths = [ndb_home_path, ndb_sys_path]
-	
-	for path in ndb_paths:
-		if path.exists():
-			ndb_files = [x for x in path.iterdir()]
-			if len(ndb_files) > 0:
-				print("Found existing Neo4j database at %s." % path)
-				status = True
-	if not status:
-		print("Did not find existing Neo4j database.")
+	try:
+		print("Connecting to Neo4j database at %s " % NEO4J_URI)
+		driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+		print("Connected to Neo4j database successfully.")
+		status = True
+	except (neobolt.exceptions.DatabaseError, neobolt.exceptions.AuthError) as e:
+		print("** Encountered an error with Neo4j graph DB: %s" % e)
+		print("** Check the database password.")
+		print("** If this is a new database, you may need to set the password first,")
+		print("** then set it as an environment variable like the following:")
+		print("** export NEO4J_PASSWORD=\"newpassword\"")
+	except	neobolt.exceptions.ServiceUnavailable as e:
+		print("** Encountered an error with Neo4j graph DB: %s" % e)
+		print("** Please verify that Neo4j is running locally or remotely.")
 		
 	return status
 	
@@ -628,9 +628,7 @@ def graphdb_stats():
 	
 	graphdb_values = {}
 	
-	start_neo4j()
-	
-	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 	
 	with driver.session() as session:
 		graph_data = session.run("MATCH ()-->() RETURN count(*)").data()
@@ -638,42 +636,13 @@ def graphdb_stats():
 	rel_count = graph_data[0]["count(*)"]
 	graphdb_values["rel_count"] = rel_count
 	
-	if rel_count < 2:
+	if rel_count < 1:
 		print("Neo4j database requires population.")
 	else:
 		print("Neo4j database contains %s relations." % str(graphdb_values["rel_count"]))
 	
 	return graphdb_values
 
-def start_neo4j():
-	'''Checks if the Neo4j server is running, and if not, 
-	starts it. If it's already running it gets restarted.
-	Note that this is specifically whether the superuser is running
-	the server, not a different user running it locally.
-	Note this will fail completely if Neo4j is not installed!'''
-	
-	status = False
-	
-	process = subprocess.Popen(["sudo", "neo4j", "status"], stdout=subprocess.PIPE)
-	out, err = process.communicate()
-	if out.rstrip() == b"Neo4j is not running": #Start Neo4j
-		print("Starting Neo4j.")
-		subprocess.run(["sudo", "neo4j", "start"])
-		time.sleep(5) #Take a few moments to let service start
-		status = True
-	elif out.rstrip() == b"sudo: neo4j: command not found": #Not installed
-		print("Neo4j may not be installed on this system.")
-		status = False
-		sys.exit()
-	elif (out.rstrip())[1:16] == b"Neo4j is running": #Try restarting it
-		subprocess.run(["sudo", "neo4j", "restart"])
-		time.sleep(5) #Take a few moments to let service start
-		status = True
-	else:
-		status = True
-		
-	return status
-	
 def check_server():
 	'''Check on status of the Flask server.'''
 	
@@ -717,7 +686,7 @@ def populate_graphdb(test_only):
 	
 	status = False
 	
-	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 	
 	max_node_count = 1000000 #The total number of nodes to create based on a single KB source.
 	if test_only:
@@ -882,7 +851,7 @@ def crosslink_graphdb():
 	Returns True if completed without errors.'''
 	status = False
 	
-	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 	
 	print("Adding cross-links to graph DB...") #Doesn't do anything yet
 	status = True 
@@ -895,7 +864,7 @@ def empty_graphdb():
 	
 	status = False
 	
-	driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 	
 	print("Will empty all contents from graph DB.")
 	print("Please note that the database can be removed entirely by "
