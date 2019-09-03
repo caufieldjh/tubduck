@@ -41,7 +41,7 @@ TOTAL_KBS = 4 #The total count of knowledge bases we'll use
 WORKING_PATH = Path('../working')
 KB_PATH = Path('../working/kbs')
 KB_PROC_PATH = Path('../working/kbs/processed')
-SCHEMA_PATH = Path('../schemas')
+SCHEMA_PATH = Path('tubduck_app/schema.graphql')
 
 SERVER_LOC = 'http://127.0.0.1:5000/'
 
@@ -695,8 +695,7 @@ def check_schema():
 	status = False
 	
 	try:
-		schemafilepath = SCHEMA_PATH / "schema.graphql"
-		schema = ariadne.load_schema_from_path(schemafilepath)
+		schema = ariadne.load_schema_from_path(SCHEMA_PATH)
 		status = True
 		print("Schema are OK.")
 	except (IOError, graphql.error.syntax_error.GraphQLSyntaxError, ariadne.exceptions.GraphQLFileSyntaxError) as e:

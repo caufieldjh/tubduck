@@ -1,0 +1,40 @@
+---
+# Simple version of TUBDUCK schema
+# Based on biolink-model, with additional adaptations for clinical semantics
+# WIP
+
+name: tubduck_schema
+description: Data model for the TUBDUCK platform, separated by concept vs. instance data types
+
+classes:
+
+  ## ------
+  ## Concept Entities
+  ## Each type refers to a conceptual representation, e.g. a knowledgebase entry.
+  ## ------
+  Concept:
+    description: >-
+      An entity of unassigned type.
+
+  Protein:
+    description: >-
+      A gene product composed of amino acids
+    is_a: Concept
+
+  ## ------
+  ## Instance Entities
+  ## Each type refers to a specific event or entity described in a record, e.g. a diagnosis or a patient. 
+  ## ------
+
+relations:
+
+  ## ------
+  ## Concept Relations
+  ## Each type refers to a relationship between conceptual representations.
+  ## ------
+
+  ## ------
+  ## Instance Relations
+  ## Each type refers to a relationship between recorded events or entities.
+  ## ------
+...
