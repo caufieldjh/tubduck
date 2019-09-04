@@ -44,7 +44,7 @@ TOTAL_KBS = 4 #The total count of knowledge bases we'll use
 WORKING_PATH = Path('../working')
 KB_PATH = Path('../working/kbs')
 KB_PROC_PATH = Path('../working/kbs/processed')
-SCHEMA_PATH = Path('tubduck_app/schema.graphql')
+SCHEMA_PATH = Path('../schemas/schema.graphql')
 
 SERVER_LOC = 'http://127.0.0.1:5000/'
 
@@ -183,6 +183,11 @@ def setup(setup_to_do):
 			print("Encountered errors while processing knowledge base files.")
 			status = False
 	
+	if "empty graph DB" in setup_to_do:
+		if not empty_graphdb():
+			print("Encountered errors while emptying graph database.")
+			status = False
+	
 	if "populate graph DB" in setup_to_do or "populate graph DB as test" in setup_to_do:
 		if "populate graph DB as test" in setup_to_do:
 			test_only = True
@@ -193,11 +198,6 @@ def setup(setup_to_do):
 			status = False
 		if not crosslink_graphdb():
 			print("Encountered errors while adding cross-links to graph database.")
-			status = False
-	
-	if "empty graph DB" in setup_to_do:
-		if not empty_graphdb():
-			print("Encountered errors while emptying graph database.")
 			status = False
 			
 	if "check Flask server" in setup_to_do:
