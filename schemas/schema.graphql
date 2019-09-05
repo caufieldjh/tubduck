@@ -217,7 +217,7 @@ type Biosample implements ThingWithTaxon
     inTaxon: [OrganismTaxon]
   }
 
-type BiosampleToDiseaseOrPhenotypicFeatureAssociation implements BiosampleToThingAssociation, ThingToDiseaseOrPhenotypicFeatureAssociation
+type BiosampleToDiseaseOrPhenotypicFeatureAssociation implements BiosampleToThingAssociation & ThingToDiseaseOrPhenotypicFeatureAssociation
   {
     subject: NamedThing!
     relation: Uriorcurie!
@@ -332,7 +332,7 @@ type Case
     inTaxon: [OrganismTaxon]
   }
 
-type CaseToPhenotypicFeatureAssociation implements EntityToPhenotypicFeatureAssociation, CaseToThingAssociation
+type CaseToPhenotypicFeatureAssociation implements EntityToPhenotypicFeatureAssociation & CaseToThingAssociation
   {
     subject: NamedThing!
     relation: Uriorcurie!
@@ -401,7 +401,7 @@ type CellLine
     inTaxon: [OrganismTaxon]
   }
 
-type CellLineToDiseaseOrPhenotypicFeatureAssociation implements CellLineToThingAssociation, ThingToDiseaseOrPhenotypicFeatureAssociation
+type CellLineToDiseaseOrPhenotypicFeatureAssociation implements CellLineToThingAssociation & ThingToDiseaseOrPhenotypicFeatureAssociation
   {
     subject: DiseaseOrPhenotypicFeature!
     relation: Uriorcurie!
@@ -517,7 +517,7 @@ type ChemicalSubstance
     inTaxon: [OrganismTaxon]
   }
 
-type ChemicalToDiseaseOrPhenotypicFeatureAssociation implements ChemicalToThingAssociation, ThingToDiseaseOrPhenotypicFeatureAssociation
+type ChemicalToDiseaseOrPhenotypicFeatureAssociation implements ChemicalToThingAssociation & ThingToDiseaseOrPhenotypicFeatureAssociation
   {
     subject: NamedThing!
     relation: Uriorcurie!
@@ -807,7 +807,7 @@ interface DiseaseOrPhenotypicFeatureAssociationToThingAssociation
     edgeLabel: LabelType!
   }
 
-type DiseaseToPhenotypicFeatureAssociation implements EntityToPhenotypicFeatureAssociation, DiseaseToThingAssociation
+type DiseaseToPhenotypicFeatureAssociation implements EntityToPhenotypicFeatureAssociation & DiseaseToThingAssociation
   {
     subject: NamedThing!
     relation: Uriorcurie!
@@ -1249,7 +1249,7 @@ type Gene
     geneAssociatedWithCondition: [DiseaseOrPhenotypicFeature]
   }
 
-type GeneAsAModelOfDiseaseAssociation implements ModelToDiseaseMixin, EntityToDiseaseAssociation
+type GeneAsAModelOfDiseaseAssociation implements ModelToDiseaseMixin & EntityToDiseaseAssociation
   {
     subject: GeneOrGeneProduct!
     relation: Uriorcurie!
@@ -1333,10 +1333,6 @@ type GeneFamily implements GeneGrouping
     regulatesEntityToEntity: [MolecularEntity]
     biomarkerFor: [DiseaseOrPhenotypicFeature]
     inTaxon: [OrganismTaxon]
-  }
-
-interface GeneGrouping
-  {
   }
 
 type GeneHasVariantThatContributesToDiseaseAssociation
@@ -1608,7 +1604,7 @@ type GeneRegulatoryRelationship
     edgeLabel: LabelType!
   }
 
-type GeneToDiseaseAssociation implements EntityToDiseaseAssociation, GeneToThingAssociation
+type GeneToDiseaseAssociation implements EntityToDiseaseAssociation & GeneToThingAssociation
   {
     subject: GeneOrGeneProduct!
     relation: Uriorcurie!
@@ -1703,7 +1699,7 @@ type GeneToGoTermAssociation
     edgeLabel: LabelType!
   }
 
-type GeneToPhenotypicFeatureAssociation implements EntityToPhenotypicFeatureAssociation, GeneToThingAssociation
+type GeneToPhenotypicFeatureAssociation implements EntityToPhenotypicFeatureAssociation & GeneToThingAssociation
   {
     subject: GeneOrGeneProduct!
     relation: Uriorcurie!
@@ -1994,7 +1990,7 @@ type GenotypeToGenotypePartAssociation
     edgeLabel: LabelType!
   }
 
-type GenotypeToPhenotypicFeatureAssociation implements EntityToPhenotypicFeatureAssociation, GenotypeToThingAssociation
+type GenotypeToPhenotypicFeatureAssociation implements EntityToPhenotypicFeatureAssociation & GenotypeToThingAssociation
   {
     subject: Genotype!
     relation: Uriorcurie!
@@ -2893,10 +2889,6 @@ interface PairwiseInteractionAssociation
     interactingMoleculesCategory: OntologyClass
   }
 
-interface PathognomonicityQuantifier
-  {
-  }
-
 type Pathway
   {
     id: IdentifierType!
@@ -3234,10 +3226,6 @@ type Publication
     systematicSynonym: [LabelType]
   }
 
-interface RelationshipQuantifier
-  {
-  }
-
 type RelationshipType
   {
     id: IdentifierType!
@@ -3400,10 +3388,6 @@ type RNAProductIsoform implements GeneProductIsoform
     expressedIn: [AnatomicalEntity]
   }
 
-interface SensitivityQuantifier
-  {
-  }
-
 type SequenceFeatureRelationship
   {
     subject: GenomicEntity!
@@ -3518,10 +3502,6 @@ type SeverityValue
     description: NarrativeText
     systematicSynonym: [LabelType]
     subclassOf: [IriType]
-  }
-
-interface SpecificityQuantifier
-  {
   }
 
 interface ThingToDiseaseOrPhenotypicFeatureAssociation
@@ -3646,7 +3626,7 @@ type Treatment
     hasExposureParts: [DrugExposure]!
   }
 
-type VariantToDiseaseAssociation implements VariantToThingAssociation, EntityToDiseaseAssociation
+type VariantToDiseaseAssociation implements VariantToThingAssociation & EntityToDiseaseAssociation
   {
     subject: NamedThing!
     relation: Uriorcurie!
@@ -3664,7 +3644,7 @@ type VariantToDiseaseAssociation implements VariantToThingAssociation, EntityToD
     onsetQualifier: Onset
   }
 
-type VariantToPhenotypicFeatureAssociation implements VariantToThingAssociation, EntityToPhenotypicFeatureAssociation
+type VariantToPhenotypicFeatureAssociation implements VariantToThingAssociation & EntityToPhenotypicFeatureAssociation
   {
     subject: SequenceVariant!
     relation: Uriorcurie!
@@ -3683,7 +3663,7 @@ type VariantToPhenotypicFeatureAssociation implements VariantToThingAssociation,
     onsetQualifier: Onset
   }
 
-type VariantToPopulationAssociation implements VariantToThingAssociation, FrequencyQuantifier, FrequencyQualifierMixin
+type VariantToPopulationAssociation implements VariantToThingAssociation & FrequencyQuantifier & FrequencyQualifierMixin
   {
     subject: SequenceVariant!
     relation: Uriorcurie!
