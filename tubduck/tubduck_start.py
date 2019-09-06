@@ -49,7 +49,7 @@ SCHEMA_PATH = Path('../schemas/schema.graphql')
 SERVER_LOC = 'http://127.0.0.1:5000/'
 
 KB_NAMES = {"don": "doid.obo",		
-				"m19": "d2019.bin",  
+				#"m19": "d2019.bin",  
 				"i10": "icd10cm_tabular_2019.xml",
 				"i11": "simpletabulation.zip"
 					}
@@ -214,7 +214,7 @@ def get_kbs(names, path):
 	Also requires a Path where they will be written to.'''
 	
 	data_locations = {"don": ("http://ontologies.berkeleybop.org/","doid.obo"),
-					"m19": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2019.bin"), 
+					#"m19": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2019.bin"), 
 					"i10": ("ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2019/", "icd10cm_tabular_2019.xml"),
 					"i11": ("https://icd.who.int/browse11/Downloads/", "Download?fileName=simpletabulation.zip")
 					}
@@ -266,11 +266,11 @@ def process_kbs(names, inpath, outpath):
 				pass
 			else:
 				status = False
-		if name == "m19":
-			if process_mesh(KB_NAMES[name], inpath, outpath):
-				pass
-			else:
-				status = False
+		# if name == "m19":
+			# if process_mesh(KB_NAMES[name], inpath, outpath):
+				# pass
+			# else:
+				# status = False
 		if name == "i10":
 			if process_icd10cm(KB_NAMES[name], inpath, outpath):
 				pass
@@ -325,45 +325,45 @@ def process_diseaseontology(infilename, inpath, outpath):
 
 	return status
 
-def process_mesh(infilename, inpath, outpath):
-	'''Processes MeSH into relationship format.
-	Takes input from process_kbs.'''
+# def process_mesh(infilename, inpath, outpath):
+	# '''Processes MeSH into relationship format.
+	# Takes input from process_kbs.'''
 	
-	status = True
+	# status = True
 	
-	infilepath = inpath / infilename
-	newfilename = (str(infilename.split(".")[0])) + "-proc"
-	outfilepath = outpath / newfilename
-	print("Processing %s." % infilename)
-	try:
-		pbar = tqdm(unit=" lines")
-		with infilepath.open() as infile:
-			with outfilepath.open("w") as outfile:
-				entry = {}
-				for line in infile:
-					text = line.strip().split("=",1)
-					if text == ["*NEWRECORD"]: #start new entry for term
-						if len(entry.keys()) > 0: #If we have a previous entry, write it
-							outfile.write(str(entry) + "\n")
-						entry = {}
-					if text[0].strip() in ["RECTYPE","MH","AQ","ENTRY","MN","PA","UI"]:
-						if text[0].strip() in entry.keys(): #Have it already
-							entry[text[0].strip()].append(text[1].strip())
-						else:
-							if text[0].strip() in ["UI"]: #Gotta add prefix for UI
-								entry[text[0].strip()] = ["MESH:" + text[1].strip()]
-							else:	
-								entry[text[0].strip()] = [text[1].strip()]
-					pbar.update(1)
-				if len(entry.keys()) > 0: #Write the last entry
-					outfile.write(str(entry) + "\n")
+	# infilepath = inpath / infilename
+	# newfilename = (str(infilename.split(".")[0])) + "-proc"
+	# outfilepath = outpath / newfilename
+	# print("Processing %s." % infilename)
+	# try:
+		# pbar = tqdm(unit=" lines")
+		# with infilepath.open() as infile:
+			# with outfilepath.open("w") as outfile:
+				# entry = {}
+				# for line in infile:
+					# text = line.strip().split("=",1)
+					# if text == ["*NEWRECORD"]: #start new entry for term
+						# if len(entry.keys()) > 0: #If we have a previous entry, write it
+							# outfile.write(str(entry) + "\n")
+						# entry = {}
+					# if text[0].strip() in ["RECTYPE","MH","AQ","ENTRY","MN","PA","UI"]:
+						# if text[0].strip() in entry.keys(): #Have it already
+							# entry[text[0].strip()].append(text[1].strip())
+						# else:
+							# if text[0].strip() in ["UI"]: #Gotta add prefix for UI
+								# entry[text[0].strip()] = ["MESH:" + text[1].strip()]
+							# else:	
+								# entry[text[0].strip()] = [text[1].strip()]
+					# pbar.update(1)
+				# if len(entry.keys()) > 0: #Write the last entry
+					# outfile.write(str(entry) + "\n")
 					
-		pbar.close()
-	except IOError as e:
-		print("Encountered an error while processing %s: %s" % (infilename, e))
-		status = False
+		# pbar.close()
+	# except IOError as e:
+		# print("Encountered an error while processing %s: %s" % (infilename, e))
+		# status = False
 
-	return status
+	# return status
 	
 def process_icd10cm(infilename, inpath, outpath):
 	'''Processes 2019 release of ICD-10-CM into relationship format.
@@ -762,7 +762,7 @@ def populate_graphdb(test_only):
 			pbar.close()
 			
 		# if kb == "m19":
-			# #Going to remove MeSH shortly
+			# Not currently used
 			# '''Some nodes are added more than once if they have multiple
 			# MN codes (this means they occupy multiple places in the
 			# MeSH tree. Is_a relations are based on MN as well, 
