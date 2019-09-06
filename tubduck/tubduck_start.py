@@ -734,21 +734,25 @@ def populate_graphdb(test_only):
 		print("Loading relevant nodes and relations into graph DB...")
 		# Now we do KB-specific parsing.
 		if kb == "don":
-			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:NamedThing {name:{name}, id:{id}, creationDate: date()})"
+			pbar = tqdm(unit=" entries added")
 			with driver.session() as session:
 				i = 0
+				session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
 				for entry in kb_rels:
 					try:
 						name1 = entry["name"][0]
 						kb_id1 = entry["id"][0]
-						session.run(statement, {"name": name1, "id": kb_id1})
+						session.run("MERGE (a:NamedThing {id:$id}) "
+									"ON CREATE SET a.name = $name, a.creationDate = date() "
+									"ON MATCH SET a.name = $name, a.creationDate = date()",
+									name=name1, id=kb_id1)
 						if "is_a" in entry.keys():
 							targets = entry["is_a"] #May be multiple relationships
 							for target in targets:
 								kb_id2 = (target.split("!")[0]).strip()
-								session.run("MATCH (a:NamedThing {id: $kb_id1}), (b:NamedThing {id: $kb_id2}) "
-										"MERGE (a)-[r:subclassOf {creationDate: date()}]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+								session.run("MERGE (a:NamedThing {id: $id1}) "
+										"MERGE (b:NamedThing {id: $id2}) "
+										"MERGE (a)-[r:subclassOf {creationDate: date()}]->(b)", id1=kb_id1, id2=kb_id2)
 						i = i+1
 						pbar.update(1)
 						if i == max_node_count:
@@ -757,55 +761,65 @@ def populate_graphdb(test_only):
 						pass
 			pbar.close()
 			
-		if kb == "m19":
-			'''Some nodes are added more than once if they have multiple
-			MN codes (this means they occupy multiple places in the
-			MeSH tree. Is_a relations are based on MN as well, 
-			as we don't always know the corresponding entry.'''
-			pbar = tqdm(unit=" entries added")
-			statement = "MERGE (a:NamedThing {name:{name}, id:{id}, description:{description}, creationDate: date()})"
-			with driver.session() as session:
-				i = 0
-				for entry in kb_rels:
-					try:						
-						name1 = entry["MH"][0]
-						kb_id1 = entry["UI"][0]
-						if "MN" in entry.keys():
-							for item in entry["MN"]: #Position in the MeSH tree - may have >1
-								session.run(statement, {"name": name1, "id": kb_id1 , "description": item})
-								mn_split = item.split(".")
-								if len(mn_split) >1: #If this isn't a parent term/code already
-									mn_parent = ".".join(mn_split[:-1])
-									session.run("MATCH (a:NamedThing {description: $mn1}), (b:NamedThing {description: $mn2})"
-										"MERGE (a)-[r:subclassOf {creationDate: date()}]->(b)", mn1=item, mn2=mn_parent)
-						if "PA" in entry.keys():
-							for item in entry["PA"]: #Pharmacologic Action - only present for subset
-								name2 = item
-								session.run("MATCH (a:NamedThing {name: $name1}), (b:NamedThing {name: $name2}) "
-										"MERGE (a)-[r:subclassOf {creationDate: date()}]->(b)", name1=name1, name2=name2)
-						i = i+1
-						pbar.update(1)
-						if i == max_node_count:
-							break
-					except KeyError: #Discard this entry
-						pass
-			pbar.close()
+		# if kb == "m19":
+			# #Going to remove MeSH shortly
+			# '''Some nodes are added more than once if they have multiple
+			# MN codes (this means they occupy multiple places in the
+			# MeSH tree. Is_a relations are based on MN as well, 
+			# as we don't always know the corresponding entry.'''
+			# pbar = tqdm(unit=" entries added")
+			# with driver.session() as session:
+				# i = 0
+				# session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
+				# for entry in kb_rels:
+					# try:						
+						# name1 = entry["MH"][0]
+						# kb_id1 = entry["UI"][0]
+						# if "MN" in entry.keys():
+							# locs = str(entry["MN"])
+							# session.run("MERGE (a:NamedThing {id:$id}) "
+									# "ON CREATE SET a.name = $name, a.description = $description, a.creationDate = date() "
+									# "ON MATCH SET a.name = $name, a.description = $description, a.creationDate = date()",
+									# name=name1, id=kb_id1, description=locs)
+							# for item in entry["MN"]: #Position in the MeSH tree - may have >1
+								# session.run(statement, {"name": name1, "id": kb_id1 , "description": item})
+								# mn_split = item.split(".")
+								# if len(mn_split) >1: #If this isn't a parent term/code already
+									# mn_parent = ".".join(mn_split[:-1])
+									# session.run("MERGE (b:NamedThing {description:$mn2}) " #
+										# "MERGE (a:NamedThing {description: $mn1})-[r:subclassOf {creationDate: date()}]->(b)", mn1=item, mn2=mn_parent)
+						# if "PA" in entry.keys():
+							# for item in entry["PA"]: #Pharmacologic Action - only present for subset
+								# name2 = item
+								# session.run("MERGE (b:NamedThing {name:$name2}) " #Data isn't sorted, so we create other node if needed 
+										# "MERGE (a:NamedThing {name: $name1})-[r:subclassOf {creationDate: date()}]->(b)", name1=name1, name2=name2)
+						# i = i+1
+						# pbar.update(1)
+						# if i == max_node_count:
+							# break
+					# except KeyError: #Discard this entry
+						# pass
+			# pbar.close()
 			
 		if kb == "i10":
-			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:NamedThing {id:{id}, name:{name}, description:{description}, creationDate: date()})"
+			pbar = tqdm(unit=" entries added")
 			with driver.session() as session:
 				i = 0
+				session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
 				for entry in kb_rels:
 					try:
 						kb_id1 = entry["id"]
 						name1 = entry["name"]
 						code1 = entry["code"]
-						session.run(statement, {"id": kb_id1, "name": name1, "description": code1})
+						session.run("MERGE (a:NamedThing {id:$id}) "
+									"ON CREATE SET a.name = $name, a.description = $description, a.creationDate = date() "
+									"ON MATCH SET a.name = $name, a.description = $description, a.creationDate = date()",
+									name=name1, id=kb_id1, description=code1)
 						if "is_a" in entry.keys(): #All codes have one parent at most
 							kb_id2 = entry["is_a"]
-							session.run("MATCH (a:NamedThing {id: $kb_id1}), (b:NamedThing {id: $kb_id2}) "
-										"MERGE (a)-[r:subclassOf {creationDate: date()}]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+							session.run("MERGE (a:NamedThing {id: $id1}) "
+										"MERGE (b:NamedThing {id: $id2}) "
+										"MERGE (a)-[r:subclassOf {creationDate: date()}]->(b)", id1=kb_id1, id2=kb_id2)
 						i = i+1
 						pbar.update(1)
 						if i == max_node_count:
@@ -815,20 +829,24 @@ def populate_graphdb(test_only):
 			pbar.close()
 		
 		if kb == "i11":
-			pbar = tqdm(unit=" nodes added")
-			statement = "MERGE (a:NamedThing {id:{id}, name:{name}, description:{description}, creationDate: date()})"
+			pbar = tqdm(unit=" entries added")
 			with driver.session() as session:
 				i = 0
+				session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
 				for entry in kb_rels:
 					try:
 						kb_id1 = entry["id"]
 						name1 = entry["name"]
 						code1 = entry["code"]
-						session.run(statement, {"id": kb_id1, "name": name1, "description": code1})
+						session.run("MERGE (a:NamedThing {id:$id}) "
+									"ON CREATE SET a.name = $name, a.description = $description, a.creationDate = date() "
+									"ON MATCH SET a.name = $name, a.description = $description, a.creationDate = date()",
+									name=name1, id=kb_id1, description=code1)
 						if "is_a" in entry.keys(): #All codes have one parent at most
 							kb_id2 = entry["is_a"]
-							session.run("MATCH (a:NamedThing {id: $kb_id1}), (b:NamedThing {id: $kb_id2}) "
-										"MERGE (a)-[r:subclassOf {creationDate: date()}]->(b)", kb_id1=kb_id1, kb_id2=kb_id2)
+							session.run("MERGE (a:NamedThing {id: $id1}) "
+										"MERGE (b:NamedThing {id: $id2}) "
+										"MERGE (a)-[r:subclassOf {creationDate: date()}]->(b)", id1=kb_id1, id2=kb_id2)
 						i = i+1
 						pbar.update(1)
 						if i == max_node_count:
