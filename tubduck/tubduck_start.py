@@ -51,11 +51,13 @@ SERVER_LOC = 'http://127.0.0.1:5000/'
 KB_NAMES = {"don": "doid.obo",		
 				#"m19": "d2019.bin",  
 				"i10": "icd10cm_tabular_2019.xml",
-				"i11": "simpletabulation.zip"
+				"i11": "simpletabulation.zip",
+				"reactome1": "ReactomePathways.txt", #Reactome uses two files
+				"reactome2": "ReactomePathwaysRelation.txt"
 					}
 '''
 All knowledge bases to be (potentially) loaded,
-with three-letter codes as keys,
+with codes as keys,
 and the original, in some cases compressed, files
 as values.
 '''
@@ -86,7 +88,7 @@ def setup_checks(tasks):
 	
 	#Check on what we already have
 	if KB_PATH.exists():
-		kb_files = [x for x in KB_PATH.iterdir()]
+		kb_files = [x for x in KB_PATH.iterdir()] #doesn't work right since we have extra files
 		if len(kb_files) == 0:
 			setup_list.append("retrieve all knowledge bases")
 		elif len(kb_files) < TOTAL_KBS:
@@ -210,13 +212,15 @@ def setup(setup_to_do):
 def get_kbs(names, path):
 	'''Retrieves knowledge bases in their full form from various remote 
 	locations. 
-	Takes a list of two-letter codes as input.
+	Takes a list of codes as input.
 	Also requires a Path where they will be written to.'''
 	
 	data_locations = {"don": ("http://ontologies.berkeleybop.org/","doid.obo"),
 					#"m19": ("ftp://nlmpubs.nlm.nih.gov/online/mesh/MESH_FILES/asciimesh/","d2019.bin"), 
 					"i10": ("ftp://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2019/", "icd10cm_tabular_2019.xml"),
-					"i11": ("https://icd.who.int/browse11/Downloads/", "Download?fileName=simpletabulation.zip")
+					"i11": ("https://icd.who.int/browse11/Downloads/", "Download?fileName=simpletabulation.zip"),
+					"reactome1": ("https://reactome.org/download/current/","ReactomePathways.txt"),
+					"reactome2": ("https://reactome.org/download/current/","ReactomePathwaysRelation.txt")
 					}
 	
 	filenames = []
@@ -278,6 +282,11 @@ def process_kbs(names, inpath, outpath):
 				status = False
 		if name == "i11":
 			if process_icd11mms(KB_NAMES[name], inpath, outpath):
+				pass
+			else:
+				status = False
+		if name == "reactome1": #Reactome uses two files; just process one
+			if process_reactome(KB_NAMES[name], inpath, outpath):
 				pass
 			else:
 				status = False
@@ -561,6 +570,56 @@ def process_icd11mms(infilename, inpath, outpath):
 
 	return status
 
+def process_reactome(infilename, inpath, outpath):
+	'''Processes Reactome pathways into relationship format.
+	This requires working with two different files,
+	but we assume both are present and combine into a single file.
+	Takes input from process_kbs.'''
+	
+	status = True
+	
+	infilepath = inpath / infilename
+	newfilename = (str(infilename.split(".")[0])) + "-proc"
+	outfilepath = outpath / newfilename
+	
+	relfilename = KB_NAMES["reactome2"]
+	relfilepath = inpath / relfilename
+	
+	print("Processing %s and %s." % (infilename, relfilename))
+	
+	try:
+		pbar = tqdm(unit=" lines")
+		with infilepath.open() as infile, relfilepath.open() as relfile:
+			all_nodes = {}
+			for line in infile:
+				text = line.strip().split("\t")
+				uri = text[0]
+				description = text[1] + " - " + text[2]
+				all_nodes[uri] = {"description":description, "is_a":"NA"}
+				pbar.update(1)
+			for line in relfile:
+				text = line.strip().split("\t")
+				uriA = text[0] #parent
+				uriB = text[1] #child
+				all_nodes[uriB]["is_a"] = uriA
+					
+		#Now write
+		with outfilepath.open("w") as outfile:
+			for node in all_nodes:
+				uri = node
+				cleanuri = "Reactome:" + uri
+				description = all_nodes[node]["description"]
+				parent = "Reactome:" + all_nodes[node]["is_a"]
+				entry = {'id':cleanuri, 'name':description, 'is_a':parent}
+				outfile.write(str(entry) + "\n")
+				
+		pbar.close()
+	except IOError as e:
+		print("Encountered an error while processing %s: %s" % (infilename, e))
+		status = False
+	
+	return status
+
 def create_graphdb():
 	'''Sets up an empty Neo4j database.
 	Sets the initial password as Neo4j requires it.
@@ -701,6 +760,8 @@ def populate_graphdb(test_only):
 	#Note that not every dict entry includes a valid relation.
 	j = 0
 	for kb in KB_NAMES:
+		if kb == "reactome2":
+			break
 		kb_rels = []
 		infilename = KB_NAMES[kb].split(".")[0] + "-proc"
 		print("Loading entries from %s..." % infilename)
@@ -855,8 +916,35 @@ def populate_graphdb(test_only):
 						pass
 			pbar.close()
 		
+		if kb == "reactome1":
+			pbar = tqdm(unit=" entries added")
+			with driver.session() as session:
+				i = 0
+				session.run("CREATE CONSTRAINT ON (a:Pathway) ASSERT a.id IS UNIQUE")
+				for entry in kb_rels:
+					try:
+						kb_id1 = entry["id"]
+						name1 = entry["name"]
+						session.run("MERGE (a:Pathway {id:$id}) "
+									"ON CREATE SET a.name = $name, a.creationDate = date() "
+									"ON MATCH SET a.name = $name, a.creationDate = date()",
+									name=name1, id=kb_id1)
+						if "is_a" in entry.keys(): #All codes have one parent at most
+							kb_id2 = entry["is_a"]
+							if kb_id2 != "NA":
+								session.run("MERGE (a:Pathway {id: $id1}) "
+										"MERGE (b:Pathway {id: $id2}) "
+										"MERGE (a)-[r:subclassOf {creationDate: date()}]->(b)", id1=kb_id1, id2=kb_id2)
+						i = i+1
+						pbar.update(1)
+						if i == max_node_count:
+							break
+					except KeyError: #Discard this entry
+						pass
+			pbar.close()			
+		
 		j = j+1
-		if j == len(KB_NAMES):
+		if j == len(KB_NAMES)-1:
 			status = True
 		
 	return status
