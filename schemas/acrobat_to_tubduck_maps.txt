@@ -1,0 +1,64 @@
+#ACROBAT types mapped to TUBDUCK types
+#Multiple potential types are delimited by semicolons
+
+#Events
+Activity	activity and behavior
+Clinical_event	clinical entity
+Diagnostic_procedure	diagnostic procedure
+Disease_disorder	disease
+Lab_value	abstract entity
+Medication	drug
+Outcome	clinical outcome
+Sign_symptom	sign or symptom
+Therapeutic_procedure	therapeutic procedure
+Date	date
+Duration	duration
+Time	time
+Other_event	occurrent
+
+#Properties
+Polarity	polarity
+Trend		trend
+
+#Entities
+Administration	mode of administration
+Age	life stage
+Area	quantity value
+Biologial_structure	anatomical entity
+Color	attribute
+Detailed_description	named thing
+Diagnostic_standard	diagnostic standard
+Distance	quantity value
+Dosage	drug exposure
+Family_history	history
+Frequency	frequency value
+Gene_or_protein	gene;protein
+History	history
+Mass	quantity value
+Nonbiological_location
+Occupation	activity and behavior
+Personal_background	population of individual organisms
+Qualitative_concept	attribute
+Quantitative_concept	quantity value
+Severity	severity value
+Sex	biological sex
+Shape	attribute
+Subject	case
+Texture	attribute
+Volume	quantity value
+Other_entity	named thing
+
+#Relations
+MODIFY	related to
+AFTER
+BEFORE	precedes
+OVERLAP
+CAUSE
+IDENTICAL	same as
+SUB_PROCEDURE	subprocedure of
+ENCODES	has gene product
+INTERACTS_WITH	molecularly interacts with
+INVOLVES_ANATOMY
+INVOLVES_GENE	gene associated with condition
+IS_A_PROCEDURE	
+IS_COMPARED_TO

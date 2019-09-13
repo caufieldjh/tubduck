@@ -838,7 +838,7 @@ slots:
       - SEMMEDDB:TREATS
       - WD:P2175
 
-  prevents :
+  prevents:
     is_a: affects risk for
     description: >-
       holds between an entity whose application or use reduces the likelihood of a potential outcome.
@@ -1130,6 +1130,13 @@ slots:
     mappings:
       - SEMMEDDB:IS_A
       - WD:P279
+   
+   subprocedure of:
+     is_a: subclass of:
+     description: >-
+       holds between two procedures where one is performed during the course of performing the other
+     domain: procedure
+     range: procedure
 
 ## property slots
 
@@ -1638,6 +1645,16 @@ slots:
       - qud:unit
     in_subset:
       - samples
+   
+   polarity:
+     description: >-
+       Expresses certainty and/or completeness of an event’s occurrence (MAYBE POS, MAYBE NEG, UNCERTAIN) or its negation (NEG).
+     range: label type
+   
+   trend:
+     description: >-
+       Expresses whether a event has decreased (DEC), increased (INC), or remained the same (STAY) over time, as explicitly stated
+     range: label type
 
 classes:
 
@@ -1671,6 +1688,41 @@ classes:
     slots:
       - has unit
       - has numeric value
+  
+  timespan:
+    is_a: abstract entity
+    description: >-
+      Any amount of time, expressed in any manner
+  
+  date:
+    is_a: timespan
+    description: >-
+      A specific point in time, expressed as a day
+      
+  duration:
+    is_a: timespan
+    description: >-
+      A specific duration of time
+      
+  time:
+    is_a: timespan
+    description: >-
+      A point in time
+
+  duration:
+    is_a: timespan
+    description: >-
+      A duration of time
+      
+  diagnostic standard:
+    is_a: abstract entity
+    description: >-
+      A standard used for comparison of the values obtained through a diagnostic procedure
+  
+  history:
+    is_a: abstract entity
+    description: >-
+      A description of the events and conditions preceding a clinical case, or that of a patient's family
       
   ## ------
   ## THINGS
@@ -2030,13 +2082,17 @@ classes:
       - UMLSST:neop
 
   phenotypic feature:
-    aliases: ['sign', 'symptom', 'phenotype', 'trait', 'endophenotype']
+    aliases: ['phenotype', 'trait', 'endophenotype']
     is_a: disease or phenotypic feature
     subclass_of: UPHENO:0001001
     class_uri: UPHENO:0001001
     mappings:
       - SIO:010056
       - WD:Q169872
+      
+  sign or symptom:
+    aliases: ['sign', 'symptom', 'phenotype', 'trait', 'endophenotype']
+    is_a: phenotypic feature
 
   environment:
     aliases: ['environment', 'exposure', 'experimental condition']
@@ -2331,6 +2387,9 @@ classes:
 
   clinical intervention:
     is_a: clinical entity
+    
+  clinical outcome:
+    is_a: clinical entity
 
   device:
     is_a: named thing
@@ -2363,6 +2422,7 @@ classes:
       # Nucleotide Sequence
       - UMLSSC:T086
       - UMLSST:nusq
+      
   genome:
     is_a: genomic entity
     description: >-
@@ -2673,7 +2733,12 @@ classes:
       a location that can be described in lat/long coordinates, for a particular time
     slots:
       - timepoint
-
+  
+  mode of administration:
+    is_a: named thing
+    description: >-
+      the manner in which a drug is administered (e.g., oral; intravenous)
+      
   ## ------
   ## ASSOCIATIONS
   ## ------
@@ -3773,15 +3838,6 @@ classes:
       # Health Care Activity
       - UMLSSC:T058
       - UMLSST:hlca
-      # Laboratory Procedure
-      - UMLSSC:T059
-      - UMLSST:lbpr
-      # Diagnostic Procedure
-      - UMLSSC:T060
-      - UMLSST:diap
-      # Therapeutic or Preventive Procedure
-      - UMLSSC:T061
-      - UMLSST:topp
       # Research Activity
       - UMLSSC:T062
       - UMLSST:resa
@@ -3791,7 +3847,28 @@ classes:
       # Educational Activity
       - UMLSSC:T065
       - UMLSST:edac
+      
+  diagnostic procedure:
+    is_a: procedure
+    description: >-
+      Any procedure done primarily in order to obtain more information about a clinical case
+    mappings:
+      # Laboratory Procedure
+      - UMLSSC:T059
+      - UMLSST:lbpr
+      # Diagnostic Procedure
+      - UMLSSC:T060
+      - UMLSST:diap
 
+  therapeutic procedure:
+    is_a: procedure
+    description: >-
+      Any procedure done primarily in order to treat a disease or symptom in a clinical case
+    mappings:
+      # Therapeutic or Preventive Procedure
+      - UMLSSC:T061
+      - UMLSST:topp
+      
   phenomenon:
     is_a: occurrent
     description: >-
