@@ -112,8 +112,6 @@ def setup_checks(tasks):
 		gdb_vals = graphdb_stats()
 		if "empty_db" in tasks:
 			setup_list.append("empty graph DB")
-		if "test_load_db" in tasks:
-			print("Requested to load a test set but DB already populated.")
 		if gdb_vals["rel_count"] < 2 and "empty_db" not in tasks:
 			if "test_load_db" in tasks:
 				setup_list.append("populate graph DB as test")
