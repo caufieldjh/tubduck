@@ -17,9 +17,6 @@ import sys
 import time
 #import resource #for raising open file limits as per Neo4j
 
-import ariadne
-import graphql
-
 import ast
 
 from bs4 import BeautifulSoup
@@ -44,7 +41,6 @@ TOTAL_KBS = 4 #The total count of knowledge bases we'll use
 WORKING_PATH = Path('../working')
 KB_PATH = Path('../working/kbs')
 KB_PROC_PATH = Path('../working/kbs/processed')
-SCHEMA_PATH = Path('../schemas/schema.graphql')
 
 SERVER_LOC = 'http://127.0.0.1:5000/'
 
@@ -124,8 +120,6 @@ def setup_checks(tasks):
 			else:
 				setup_list.append("populate graph DB")
 		
-	setup_list.append("check data and query schema")
-	
 	setup_list.append("check Flask server")
 
 	return setup_list
@@ -139,11 +133,6 @@ def setup(setup_to_do):
 	status = True
 	kb_codes = KB_NAMES.keys() #Knowledge bases each get code
 	kb_proc_codes = kb_codes
-		
-	if "check data and query schema" in setup_to_do:
-		if not check_schema():
-			print("Encountered errors while loading schema.")
-			status = False
 	
 	if "working directory" in setup_to_do:
 		WORKING_PATH.mkdir(parents=True)
@@ -718,23 +707,7 @@ def check_server():
 		status = False
 		
 	return status
-	
-def check_schema():
-	'''Verifies the GraphQL-defined data and query type schema
-	are accessible and formatted correctly.'''
-	
-	status = False
-	
-	try:
-		schema = ariadne.load_schema_from_path(SCHEMA_PATH)
-		status = True
-		print("Schema are OK.")
-	except (IOError, graphql.error.syntax_error.GraphQLSyntaxError, ariadne.exceptions.GraphQLFileSyntaxError) as e:
-		print("Encountered an error while checking on schema: " + str(e))
-		status = False
 		
-	return status
-	
 def populate_graphdb(test_only):
 	'''Loads entities and relations into graph DB from processed KBs.
 	Most of these form the concept graph: they define conceptual
