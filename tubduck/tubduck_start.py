@@ -6,8 +6,6 @@ modules. This includes accumulating training data and training the
 modules themselves.
 Does not start Neo4j - it must already be running (this is to allow for
 a variety of use cases, including local or remote graph DBs).
-Does not start the server as that must continue running to be
-operational.
 '''
 
 import os
@@ -29,8 +27,6 @@ from tqdm import *
 
 from neo4j import GraphDatabase
 import neobolt.exceptions
-
-from flask import Flask
 
 import tubduck_helpers as thelp
 import tubduck_settings as tsettings
@@ -118,8 +114,6 @@ def setup_checks(tasks):
 			else:
 				setup_list.append("populate graph DB")
 		
-	setup_list.append("check Flask server")
-
 	return setup_list
 	
 def setup(setup_to_do):
@@ -187,11 +181,6 @@ def setup(setup_to_do):
 			status = False
 		if not crosslink_graphdb():
 			print("Encountered errors while adding cross-links to graph database.")
-			status = False
-			
-	if "check Flask server" in setup_to_do:
-		if not check_server():
-			print("Encountered errors while checking on app server - it may not be running.")
 			status = False
 			
 	return status
@@ -691,21 +680,7 @@ def graphdb_stats():
 		print("Neo4j database contains %s relations." % str(graphdb_values["rel_count"]))
 	
 	return graphdb_values
-
-def check_server():
-	'''Check on status of the Flask server.'''
 	
-	status = False
-	
-	try:
-		urllib.request.urlopen(SERVER_LOC)
-		status = True
-	except urllib.error.URLError as e:
-		print("Error when checking on server: " + str(e))
-		status = False
-		
-	return status
-		
 def populate_graphdb(test_only):
 	'''Loads entities and relations into graph DB from processed KBs.
 	Most of these form the concept graph: they define conceptual
