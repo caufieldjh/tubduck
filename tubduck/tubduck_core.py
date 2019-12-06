@@ -35,6 +35,8 @@ parser.add_argument("--empty_db", help="empty the TUBDUCK Neo4j DB",
 parser.add_argument("--test_load_db", help="load only a testing set (100 entries each) of each data source into the DB", 
 					action="store_true")
 parser.add_argument("--get_pmid", help="retrieve one or more documents in MEDLINE format from PubMed based on PMID", 
+					action="append", nargs='+')
+parser.add_argument("--get_pmid_file", help="retrieve documents specified in a file containing one PMID per line",
 					action="append")
 args = parser.parse_args()
 
@@ -45,6 +47,8 @@ args = parser.parse_args()
 ## Main
 def main():
 	
+	pmids_to_get = []
+	
 	#Check to see if there are command line arguments first
 	tasks = [] #All user-specified tasks will go here
 	if args.empty_db:
@@ -52,7 +56,12 @@ def main():
 	if args.test_load_db:
 		tasks.append("test_load_db")
 	if args.get_pmid:
-		pmids_to_get = args.get_pmid
+		for pmid in args.get_pmid[0]:
+			pmids_to_get.append(pmid)
+	if args.get_pmid_file:
+		with open(args.get_pmid_file[0]) as pmid_file:
+			for pmid in pmid_file:
+				pmids_to_get.append(pmid)
 	
 	print("*** TUBDUCK ***")
 	
@@ -71,7 +80,8 @@ def main():
 		
 	print("Getting input ready.")
 	tinput.setup()
-	if args.get_pmid and len(pmids_to_get) > 0:
+
+	if len(pmids_to_get) > 0 :
 		newpmidfile = tinput.get_remote_docs(pmids_to_get)
 	doc_file_index = tinput.get_local_docs()
 	parsed_docs = {}

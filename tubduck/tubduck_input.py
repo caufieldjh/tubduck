@@ -40,7 +40,8 @@ def get_local_docs():
 	return doc_file_index
 	
 def get_remote_docs(pmids):
-	'''Retrieve documents from PubMed, given one or more PMIDs.'''
+	'''Retrieve documents from PubMed, given one or more PMIDs.
+	Input is a list.'''
 	
 	success = False
 	
