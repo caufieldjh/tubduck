@@ -4,9 +4,9 @@
 Input handling functions for TUBDUCK.
 
 This includes obtaining local documents and retrieving from remote locations,
-primarily PubMed. Local files are stored in either raw (i.e., text only)
+primarily PubMed. Local files are obtained in either raw (i.e., text only)
 or in MEDLINE format, in their respective directories within the "input"
-directory.
+directory. They are then stored in an SQLite database.
 '''
 
 from datetime import datetime
@@ -16,12 +16,15 @@ import urllib
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+import sqlite3
+
 from Bio import Medline
 
 ## Constants
 INPUT_PATH = Path('../input')
 MEDLINE_PATH = Path('../input/medline')
 RAW_PATH = Path('../input/raw')
+DB_PATH = Path('../input/db.sqlite')
 
 ## Functions
 def get_local_docs():
@@ -41,7 +44,7 @@ def get_local_docs():
 	
 def get_remote_docs(pmids):
 	'''Retrieve documents from PubMed, given one or more PMIDs.
-	Input is a list.'''
+	Input is a list. Returns a dict.'''
 	
 	success = False
 	
@@ -114,29 +117,64 @@ def parse_docs(doc_file_index):
 	named based on its PMID and populated with MEDLINE format fields.
 	For raw documents, they will be identified based on their filenames.
 	Takes a dictionary as input, as produced by the get_local_docs()
-	method. Returns a dictionary with document IDs as keys.'''
+	method. Loads contents into input database.'''
 	
-	parsed_docs = {}
+	dbcon = input_db_connect()
+	cur = dbcon.cursor()
+	
+	doc_id = 0
 	
 	for filetype in doc_file_index:
 		if filetype == "medline": #Need to parse further
 			for doc_file_path in doc_file_index[filetype]:
 				with open(doc_file_path) as handle:
-					record = Medline.read(handle)
-					pmid = record['PMID']
-					del record['PMID']
-					parsed_docs[pmid] = record
-		if filetype == "raw": #Not much to parse yet
-			for doc_file_path in doc_file_index[filetype]:
-				filename = doc_file_path.stem
-				parsed_docs[filename] = {}
-				parsed_docs[filename]['text'] = []
-				with open(doc_file_path) as raw_doc:
-					for line in raw_doc:
-						parsed_docs[filename]['text'].append(line)
+					records = Medline.parse(handle)
+					for record in records:
+						
+						record["id"] = doc_id
+						del record["IS"]
+						
+						newrecord = {} #Need to flatten some lists
+						for datatype in record:
+							if type(record[datatype]) is list:
+								newrecord[datatype] = "|".join(record[datatype])
+							else:
+								newrecord[datatype] = record[datatype]
+						record = newrecord
+									
+						columns = ', '.join(record.keys())
+						placeholders = ':'+', :'.join(record.keys())
+						sql = """INSERT INTO documents(%s)
+									VALUES(%s)""" % (columns, placeholders)
+									
+						try:
+							cur.execute(sql, record)
+						except sqlite3.OperationalError as e:
+							print(e)
+							pass		#Note this will NOT load the entry
+						
+						doc_id = doc_id +1
+				
+		# if filetype == "raw": #Not much to parse yet
+			# for doc_file_path in doc_file_index[filetype]:
+				# filename = doc_file_path.stem
+				# parsed_docs[filename] = {}
+				# parsed_docs[filename]['text'] = []
+				# with open(doc_file_path) as raw_doc:
+					# for line in raw_doc:
+						# parsed_docs[filename]['text'].append(line)
+				# doc_id = doc_id +1
 	
-	print(parsed_docs)
-	return parsed_docs
+	print("Loaded %s documents." % int(cur.rowcount +1))
+	sql = "SELECT * FROM documents"
+	cur.execute(sql)
+	sample = cur.fetchall()
+	print([description[0] for description in cur.description])
+	print(sample)
+	
+def input_db_connect(db_path=DB_PATH):
+	dbcon = sqlite3.connect(DB_PATH)
+	return dbcon
 	
 def setup():
 	'''Create directories if they do not yet exist.'''
@@ -144,3 +182,43 @@ def setup():
 	MEDLINE_PATH.mkdir(exist_ok=True)
 	RAW_PATH.mkdir(exist_ok=True)
 	
+	'''Setup document database. Defines most fields upon initial parsing.'''
+	dbcon = sqlite3.connect(DB_PATH)
+	cur = dbcon.cursor()
+	setup_sql = """CREATE TABLE IF NOT EXISTS documents (
+				id integer PRIMARY KEY,
+				AB text, 
+				AD text,
+				AID text,
+				AU text,
+				AUID text,
+				CI text,
+				COIS text,
+				CRDT text,
+				DEP text,
+				DP text,
+				EDAT text,
+				FAU text,
+				IP text,
+				JID text,
+				JT text,
+				LA text,
+				LID text,
+				LR text,
+				MHDA text,
+				OT text,
+				OTO text,
+				OWN text,
+				PG text,
+				PHST text,
+				PL text,
+				PMC text,
+				PMID text,
+				PST text,
+				PT text,
+				SO text,
+				STAT text,
+				TA text,
+				TI text,
+				VI text)"""
+	cur.execute(setup_sql)

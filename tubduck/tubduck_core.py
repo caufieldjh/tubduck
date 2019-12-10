@@ -91,8 +91,7 @@ def main():
 			print("Found no local %s input files." % filetype)
 		else:
 			print("Found %s local %s input files." % (filecount, filetype))
-	parsed_docs = tinput.parse_docs(doc_file_index)
-	print("%s parsed document(s) to be processed." % len(parsed_docs))
+	tinput.parse_docs(doc_file_index)
 	
 	print("Processing...")
 	#Run tubduck_process methods
