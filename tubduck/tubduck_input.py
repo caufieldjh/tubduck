@@ -132,7 +132,8 @@ def parse_docs(doc_file_index):
 					for record in records:
 						
 						record["id"] = doc_id
-						del record["IS"]
+						if "IS" in record.keys(): #Incompatible with SQL
+							del record["IS"]
 						
 						newrecord = {} #Need to flatten some lists
 						for datatype in record:
@@ -166,11 +167,11 @@ def parse_docs(doc_file_index):
 				# doc_id = doc_id +1
 	
 	print("Loaded %s documents." % int(cur.rowcount +1))
-	sql = "SELECT * FROM documents"
-	cur.execute(sql)
-	sample = cur.fetchall()
-	print([description[0] for description in cur.description])
-	print(sample)
+	#sql = "SELECT * FROM documents"
+	#cur.execute(sql)
+	#sample = cur.fetchall()
+	#print([description[0] for description in cur.description])
+	#print(sample)
 	
 def input_db_connect(db_path=DB_PATH):
 	dbcon = sqlite3.connect(DB_PATH)
@@ -193,19 +194,37 @@ def setup():
 				AU text,
 				AUID text,
 				CI text,
+				CIN text,
+				CN text,
+				CON text,
 				COIS text,
 				CRDT text,
+				CRF text,
+				CRI text,
+				DCOM text,
 				DEP text,
 				DP text,
 				EDAT text,
+				EIN text,
 				FAU text,
+				FIR text,
+				FPS text,
+				GN text,
+				GR text,
+				GS text,
 				IP text,
+				IR text,
+				IRAD text,
 				JID text,
 				JT text,
 				LA text,
 				LID text,
 				LR text,
+				MH text,
 				MHDA text,
+				MID text,
+				OAB text,
+				OABL text,
 				OT text,
 				OTO text,
 				OWN text,
@@ -213,12 +232,21 @@ def setup():
 				PHST text,
 				PL text,
 				PMC text,
+				PMCR text,
 				PMID text,
+				PS text,
 				PST text,
 				PT text,
+				RF text,
+				RIN text,
+				RN text,
+				RPI text,
+				SB text,
+				SI text,
 				SO text,
 				STAT text,
 				TA text,
 				TI text,
+				TT text,
 				VI text)"""
 	cur.execute(setup_sql)
