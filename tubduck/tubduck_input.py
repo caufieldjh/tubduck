@@ -128,6 +128,7 @@ def parse_docs(doc_file_index):
 		if filetype == "medline": #Need to parse further
 			for doc_file_path in doc_file_index[filetype]:
 				with open(doc_file_path) as handle:
+					pbar = tqdm(unit="documents")
 					records = Medline.parse(handle)
 					for record in records:
 						
@@ -142,7 +143,7 @@ def parse_docs(doc_file_index):
 							else:
 								newrecord[datatype] = record[datatype]
 						record = newrecord
-									
+						
 						columns = ', '.join(record.keys())
 						placeholders = ':'+', :'.join(record.keys())
 						sql = """INSERT INTO documents(%s)
@@ -150,11 +151,16 @@ def parse_docs(doc_file_index):
 									
 						try:
 							cur.execute(sql, record)
+							dbcon.commit()
+							pbar.update(1)
 						except sqlite3.OperationalError as e:
 							print(e)
 							pass		#Note this will NOT load the entry
+						except sqlite3.IntegrityError as e:
+							print("%s - document with PMID %s already stored" % (e, record["PMID"]))
 						
 						doc_id = doc_id +1
+				pbar.close()
 				
 		# if filetype == "raw": #Not much to parse yet
 			# for doc_file_path in doc_file_index[filetype]:
@@ -166,12 +172,12 @@ def parse_docs(doc_file_index):
 						# parsed_docs[filename]['text'].append(line)
 				# doc_id = doc_id +1
 	
-	print("Loaded %s documents." % int(cur.rowcount +1))
-	#sql = "SELECT * FROM documents"
-	#cur.execute(sql)
-	#sample = cur.fetchall()
-	#print([description[0] for description in cur.description])
-	#print(sample)
+	cur.execute("SELECT COUNT(*) FROM documents")
+	print("Loaded %s documents." % list(cur)[0][0])
+	cur.execute("SELECT * FROM documents")
+	sample = cur.fetchmany(2)
+	print([description[0] for description in cur.description])
+	print(sample)
 	
 def input_db_connect(db_path=DB_PATH):
 	dbcon = sqlite3.connect(DB_PATH)
@@ -233,7 +239,7 @@ def setup():
 				PL text,
 				PMC text,
 				PMCR text,
-				PMID text,
+				PMID text UNIQUE,
 				PS text,
 				PST text,
 				PT text,
