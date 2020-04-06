@@ -12,7 +12,30 @@ TUBDUCK is a work in progress.
 
 TUBDUCK is designed for Linux only at this time.
 
-The graph database
+Requirements
+-------- 
+
+1. Install all requirements first as:
+
+``pip3 install -r requirements.txt`` 
+
+2. Set up a Neo4j server. This can be done locally or remotely (option a or option b).
+
+  a) Install Neo4j - Community Server works well.  See https://neo4j.com/download-center/#community for distribution-specific instructions.
+
+On Ubuntu and other Debian distributions, Neo4j installation goes like this:
+
+``wget -O - https://debian.neo4j.com/neotechnology.gpg.key | sudo apt-key add -``
+
+``echo 'deb https://debian.neo4j.com stable latest' | sudo tee /etc/apt/sources.list.d/neo4j.list``
+
+``sudo apt-get update``
+
+``sudo apt-get install neo4j``
+
+Once installation is complete, see the section *Graph database* below.
+
+Graph database
 -------- 
 The primary requirement for this package is Neo4j (both the Python package providing the Bolt driver and the server itself - Community Edition works well).
 Please see Neo4j install instructions for your system at https://neo4j.com/download-center/#community.
@@ -29,7 +52,5 @@ You can also try out a remote Neo4j database instance through the Neo4j Sandbox 
 ``export NEO4J_HOST="ip.address.goes.here"``
 
 ``export NEO4J_PORT=12345`` - note the lack of quotes
-
-
 
 🛁🦆
