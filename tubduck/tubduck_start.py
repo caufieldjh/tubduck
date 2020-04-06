@@ -643,9 +643,12 @@ def graphdb_exists():
 	
 	status = False
 	
+	print("Checking to see if a Neo4j database is available.")
+	
 	try:
 		print("Connecting to Neo4j database at %s " % NEO4J_URI)
-		driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+		print("Username: %s " % NEO4J_USER)
+		driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD), encrypted=False)
 		print("Connected to Neo4j database successfully.")
 		status = True
 	except (neobolt.exceptions.DatabaseError, neobolt.exceptions.AuthError) as e:
@@ -657,6 +660,10 @@ def graphdb_exists():
 	except	neobolt.exceptions.ServiceUnavailable as e:
 		print("** Encountered an error with Neo4j graph DB: %s" % e)
 		print("** Please verify that Neo4j is running locally or remotely.")
+	except OSError as e:
+		print("** Encountered an error: %s" % e)
+		print("** This may be the result of a Neo4j encryption setting error.")
+		print("** See https://github.com/neo4j/neo4j/issues/12392")
 		
 	return status
 	
@@ -666,7 +673,7 @@ def graphdb_stats():
 	
 	graphdb_values = {}
 	
-	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD), encrypted=False)
 	
 	with driver.session() as session:
 		graph_data = session.run("MATCH ()-->() RETURN count(*)").data()
