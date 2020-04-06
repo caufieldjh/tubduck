@@ -701,7 +701,7 @@ def populate_graphdb(test_only):
 	
 	status = False
 	
-	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD), encrypted=False)
 	
 	max_node_count = 1000000 #The total number of nodes to create based on a single KB source.
 	if test_only:
