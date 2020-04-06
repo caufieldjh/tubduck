@@ -33,25 +33,27 @@ TUBDUCK is designed for Linux only at this time.
     
     `sudo systemctl start neo4j`
 
-    Set the username and password through the browser (usually accessible at http://localhost:7474/) beforehand: login the first time with "neo4j" and "neo4j", as username and password, respectively. Keep the username as "neo4j" but specify a new password. Then specify the password though its environment variable by running this:
-
-    `export NEO4J_PASSWORD="admin"`
+    Set the username and password through the browser (usually accessible at http://localhost:7474/) beforehand: login the first time with "neo4j" and "neo4j", as username and password, respectively. Keep the username as "neo4j" but specify a new password. Then specify all environment variables as in Step 3 below.
 
     *b)* Set up a remote Neo4j database instance. 
     
-    This can be done through the Neo4j Sandbox (https://neo4j.com/sandbox-v2). Once you've signed in and started a blank sandbox, set the following environment variables on the client (i.e., the machine you are running TUBDUCK on):
+    This can be done through the Neo4j Sandbox (https://neo4j.com/sandbox-v2). Once you've signed in and started a blank sandbox, set the following environment variables on the client (i.e., the machine you are running TUBDUCK on) as specified in step 3 below.
 
-    `export NEO4J_PASSWORD="some-random-password"`
-
-    `export NEO4J_HOST="ip.address.goes.here"`
-
-    `export NEO4J_PORT=12345` - note the lack of quotes
-    
     Amazon Web Services also provides Amazon Machine Images (AMIs) for Neo4j Community Edition: see https://aws.amazon.com/marketplace/pp/Neo4j-Neo4j-Graph-Database-Community-Edition/B071P26C9D
     
     Or, if you would prefer to use the Google Cloud Platform, there are instructions for that here: https://neo4j.com/developer/neo4j-cloud-google-image/
     
     Irrespective of the remote platform used, environment variables will need to be specified as above so TUBDUCK knows how to connect to the database.
+    
+3. Set Neo4j environment variables. Enter the following at the command line:
+
+    `export NEO4J_USER="neo4j"`
+    
+    `export NEO4J_PASSWORD="password"` - replacing *password* with whatever you set it as
+
+    `export NEO4J_HOST="ip.address.goes.here"`- yes, replace that with the actual IP address. For a local server, this will be "localhost".
+
+    `export NEO4J_PORT=12345` - note the lack of quotes. Use the port specified by the remote instance. For a local server, this port is 7687 by default.
 
 ## Running the first time
 
@@ -70,5 +72,13 @@ When setting up the Neo4j database, it may raise an error like *Neo.ClientError.
 `sudo rm -rf /var/lib/neo4j/data/`
 
 Then restart the Neo4j server as above.
+
+### Neo4j encryption issues
+
+Neo4j 4.0 made some changes to encryption defaults - encryption is disabled by default.
+
+See details here: https://github.com/neo4j/neo4j/issues/12392
+
+This likely won't require changes to your settings, but it's good to be aware of.
 
 🛁🦆
