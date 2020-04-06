@@ -33,7 +33,7 @@ TUBDUCK is designed for Linux only at this time.
     
     `sudo systemctl start neo4j`
 
-    Set the username and password through the browser (usually accessible at http://localhost:7474/) beforehand, ideally to "neo4j" and "admin", respectively. You can change the password though its environment variable by running this:
+    Set the username and password through the browser (usually accessible at http://localhost:7474/) beforehand: login the first time with "neo4j" and "neo4j", as username and password, respectively. Keep the username as "neo4j" but specify a new password. Then specify the password though its environment variable by running this:
 
     `export NEO4J_PASSWORD="admin"`
 
@@ -60,5 +60,15 @@ Run TUBDUCK as follows from its root directory:
 `./tubduck.sh`
 
 ## Troubleshooting
+
+### Neo4j authentication issues
+
+When setting up the Neo4j database, it may raise an error like *Neo.ClientError.Security.Unauthorized: The client is unauthorized due to authentication failure.* Ensure you've set up the initial password as described above. Otherwsie, stop the server and remove any previously existing database(s) as follows:
+
+`sudo systemctl stop neo4j`
+
+`sudo rm -rf /var/lib/neo4j/data/`
+
+Then restart the Neo4j server as above.
 
 🛁🦆
