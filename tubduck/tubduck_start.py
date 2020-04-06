@@ -607,12 +607,16 @@ def create_graphdb():
 	
 	#Only really need to set password once, but before starting Neo4j the first time
 	#So we need to restart its server
+	
+	'''This may not work properly in Neo4j 4.0!
+	Better to set up the DB in advance.'''
+	
 	subprocess.run(["sudo","neo4j-admin", "set-initial-password", "tubduck"])
 	start_neo4j()
 	#resource.setrlimit(resource.RLIMIT_NOFILE, (100000, 100000))
 	
 	try:
-		driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"))
+		driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "tubduck"), encrypted=False)
 		statement = "CREATE (a:Concept {name:{name}, source:{source}})"
 		
 		with driver.session() as session:
@@ -909,7 +913,7 @@ def crosslink_graphdb():
 	Returns True if completed without errors.'''
 	status = False
 	
-	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD), encrypted=False)
 	
 	print("Adding cross-links to graph DB...") #Doesn't do anything yet
 	status = True 
@@ -922,7 +926,7 @@ def empty_graphdb():
 	
 	status = False
 	
-	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+	driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD), encrypted=False)
 	
 	print("Will empty all contents from graph DB.")
 	print("Please note that the database can be removed entirely by "
