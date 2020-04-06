@@ -755,7 +755,10 @@ def populate_graphdb(test_only):
 			pbar = tqdm(unit=" entries added")
 			with driver.session() as session:
 				i = 0
-				session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
+				try:
+					session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
+				except neobolt.exceptions.ClientError as e:
+					print("\nSetting up constraints and encountered error: %s" % e)
 				for entry in kb_rels:
 					try:
 						name1 = entry["name"][0]
@@ -823,7 +826,10 @@ def populate_graphdb(test_only):
 			pbar = tqdm(unit=" entries added")
 			with driver.session() as session:
 				i = 0
-				session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
+				try:
+					session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
+				except neobolt.exceptions.ClientError as e:
+					print("\nSetting up constraints and encountered error: %s" % e)
 				for entry in kb_rels:
 					try:
 						kb_id1 = entry["id"]
@@ -850,7 +856,10 @@ def populate_graphdb(test_only):
 			pbar = tqdm(unit=" entries added")
 			with driver.session() as session:
 				i = 0
-				session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
+				try:
+					session.run("CREATE CONSTRAINT ON (a:NamedThing) ASSERT a.id IS UNIQUE")
+				except neobolt.exceptions.ClientError as e:
+					print("\nSetting up constraints and encountered error: %s" % e)
 				for entry in kb_rels:
 					try:
 						kb_id1 = entry["id"]
@@ -877,7 +886,10 @@ def populate_graphdb(test_only):
 			pbar = tqdm(unit=" entries added")
 			with driver.session() as session:
 				i = 0
-				session.run("CREATE CONSTRAINT ON (a:Pathway) ASSERT a.id IS UNIQUE")
+				try:
+					session.run("CREATE CONSTRAINT ON (a:Pathway) ASSERT a.id IS UNIQUE")
+				except neobolt.exceptions.ClientError as e:
+					print("\nSetting up constraints and encountered error: %s" % e)
 				for entry in kb_rels:
 					try:
 						kb_id1 = entry["id"]
