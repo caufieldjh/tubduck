@@ -2,6 +2,7 @@ ariadne
 biopython
 bs4
 environs
+lxml
 neo4j
 tqdm
 flair
