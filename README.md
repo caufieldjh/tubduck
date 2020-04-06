@@ -13,6 +13,10 @@ TUBDUCK is designed for Linux only at this time.
 
 ## Requirements
 
+0. Make sure your Python version is at least 3.7:
+    
+    `python3 -V`
+
 1. Install all requirements first as:
 
     `pip3 install -r requirements.txt`
@@ -86,5 +90,11 @@ Neo4j 4.0 made some changes to encryption defaults - encryption is disabled by d
 See details here: https://github.com/neo4j/neo4j/issues/12392
 
 This likely won't require changes to your settings, but it's good to be aware of.
+
+### Errors about the SQLite3 database
+
+Python versions earlier than 3.7 will cause the following error: *TypeError: argument 1 must be str, not PosixPath*.
+
+The solution is to use Python 3.7 or newer. Sorry, that's just how this one goes.
 
 🛁🦆
