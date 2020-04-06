@@ -61,6 +61,12 @@ Run TUBDUCK as follows from its root directory:
 
 `./tubduck.sh`
 
+This may take a while as it will, by default, load all knowledge sources to populate the database. You can test whether initial configurations are working first by running the following instead:
+
+`./test_tubduck.sh`
+
+This script will run TUBDUCK with the option *--test_load_db*, loading just a small fraction of each knowledge source.
+
 ## Troubleshooting
 
 ### Neo4j authentication issues
