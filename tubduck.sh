@@ -1,2 +1,2 @@
-pyversion="$(python3 -V 2>&1)"
+echo "Running TUBDUCK."
 (cd tubduck/ && python3 tubduck_core.py)
