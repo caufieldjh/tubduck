@@ -61,6 +61,8 @@ TUBDUCK is designed for Linux only at this time.
 
 ## Running the first time
 
+Make sure your Neo4j database is running, based on how you set it up (see above).
+
 Run TUBDUCK as follows from its root directory:
 
 `./tubduck.sh`
@@ -75,7 +77,7 @@ This script will run TUBDUCK with the option *--test_load_db*, loading just a sm
 
 ### Neo4j authentication issues
 
-When setting up the Neo4j database, it may raise an error like *Neo.ClientError.Security.Unauthorized: The client is unauthorized due to authentication failure.* Ensure you've set up the initial password as described above. Otherwsie, stop the server and remove any previously existing database(s) as follows:
+When setting up the Neo4j database, it may raise an error like *Neo.ClientError.Security.Unauthorized: The client is unauthorized due to authentication failure.* Ensure you've set up the initial password as described above. Otherwise, stop the server and remove any previously existing database(s) as follows:
 
 `sudo systemctl stop neo4j`
 
