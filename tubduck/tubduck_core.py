@@ -65,6 +65,15 @@ def main():
 	
 	print("*** TUBDUCK ***")
 	
+	#A quick version check
+	if sys.version_info[0] < 3:
+		sys.exit("Not compatible with Python2 -- sorry!\n"
+					"Exiting...")
+	else:
+		if sys.version_info[1] < 7:
+			sys.exit("Python3.7 or more recent is required for proper operation.\n"
+						"Exiting...")
+	
 	print("Checking to see what setup may be required.")
 	setup_to_do = tstart.setup_checks(tasks)
 	if len(setup_to_do) > 0:
